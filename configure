@@ -135,6 +135,89 @@ function sovereign_detect_hardware() {
 	fi
 }
 
+function sovereign_detect_mirror() {
+	# Tabela de mirrors por país
+	SOVEREIGN_MIRROR_LIST=(
+		"BR|Brasil — UNICAMP|http://www.las.ic.unicamp.br/pub/gentoo/"
+		"BR|Brasil — UFPR|http://gentoo.c3sl.ufpr.br/"
+		"AR|Argentina — UNC|http://mirrors.unc.edu.ar/gentoo/"
+		"US|EUA — OSU OSL|https://gentoo.osuosl.org/"
+		"US|EUA — Airnet|https://mirror.airnet.com/gentoo/"
+		"DE|Alemanha — RWTH|https://ftp.halifax.rwth-aachen.de/gentoo/"
+		"NL|Holanda — LeaseWeb|https://mirror.leaseweb.com/gentoo/"
+		"FR|Franca — Iriseden|https://gentoo.iriseden.eu/"
+		"JP|Japao — IIJ|https://ftp.iij.ad.jp/pub/linux/gentoo/"
+		"CN|China — TUNA|https://mirrors.tuna.tsinghua.edu.cn/gentoo/"
+		"AU|Australia — Internode|https://mirror.internode.on.net/pub/gentoo/"
+		"ZA|Africa do Sul — Multicast|https://mirror.multicast.co.za/gentoo/"
+	)
+
+	# Detecta país pelo IP (timeout 3s)
+	DETECTED_COUNTRY=""
+	if command -v curl &>/dev/null; then
+		DETECTED_COUNTRY=$(curl -s --max-time 3 "https://ipinfo.io/country" 2>/dev/null | tr -d '[:space:]' || echo "")
+	fi
+	[[ -z "$DETECTED_COUNTRY" ]] && DETECTED_COUNTRY="??"
+
+	# Mirror padrão (fallback)
+	DETECTED_GENTOO_MIRROR="https://mirror.leaseweb.com/gentoo/"
+	DETECTED_MIRROR_LABEL="Holanda — LeaseWeb (padrao)"
+
+	# Seleciona mirror pelo país detectado
+	for entry in "${SOVEREIGN_MIRROR_LIST[@]}"; do
+		local code url label
+		code=$(echo "$entry" | cut -d'|' -f1)
+		label=$(echo "$entry" | cut -d'|' -f2)
+		url=$(echo "$entry" | cut -d'|' -f3)
+		if [[ "$code" == "$DETECTED_COUNTRY" ]]; then
+			DETECTED_GENTOO_MIRROR="$url"
+			DETECTED_MIRROR_LABEL="$label"
+			break
+		fi
+	done
+}
+
+function sovereign_select_mirror() {
+	# Monta lista radiolist com todos os mirrors
+	local items=()
+	for entry in "${SOVEREIGN_MIRROR_LIST[@]}"; do
+		local label url state
+		label=$(echo "$entry" | cut -d'|' -f2)
+		url=$(echo "$entry" | cut -d'|' -f3)
+		if [[ "$url" == "$DETECTED_GENTOO_MIRROR" ]]; then
+			state="on"
+			label="$label  <- detectado automaticamente"
+		else
+			state="off"
+		fi
+		items+=("$url" "$label" "$state")
+	done
+
+	local result
+	result=$(command dialog --colors \
+		--title "Sovereign Edition — Mirror Gentoo" \
+		--ok-label "Usar este mirror" \
+		--cancel-label "Manter detectado" \
+		--radiolist \
+"Pais detectado: ${DETECTED_COUNTRY} | Mirror pre-selecionado: ${DETECTED_MIRROR_LABEL}
+
+Confirme ou escolha outro mirror mais proximo de voce.
+Use Space para selecionar, Enter para confirmar." \
+		20 72 10 \
+		"${items[@]}" \
+		3>&1 1>&2 2>&3) || true
+
+	[[ -n "$result" ]] && DETECTED_GENTOO_MIRROR="$result"
+
+	# Atualiza o label com o mirror final escolhido
+	for entry in "${SOVEREIGN_MIRROR_LIST[@]}"; do
+		local label url
+		label=$(echo "$entry" | cut -d'|' -f2)
+		url=$(echo "$entry" | cut -d'|' -f3)
+		[[ "$url" == "$DETECTED_GENTOO_MIRROR" ]] && DETECTED_MIRROR_LABEL="$label" && break
+	done
+}
+
 function sovereign_show_detection_summary() {
 	local ram_warn=""
 	[[ "$DETECTED_RAM_MB" -lt 8000 ]] && ram_warn="\n\Z1⚠ Menos de 8GB de RAM! Crie um swapfile antes de compilar pacotes grandes.\Zn"
@@ -142,22 +225,24 @@ function sovereign_show_detection_summary() {
 	dialog --colors \
 		--title "\ZbSovereign Edition — Hardware Detectado\ZB" \
 		--msgbox \
-"\Zb\Z2Detecção automática concluída!\ZB\Zn Todos os valores abaixo foram pré-configurados para \Zbesta máquina\ZB.
+"\Zb\Z2Deteccao automatica concluida!\ZB\Zn Todos os valores abaixo foram pre-configurados para \Zbesta maquina\ZB.
 
-\Zb CPU:\Zn  $DETECTED_CPU_MODEL
-\Zb -march:\Zn $DETECTED_MARCH
-\Zb CPU_FLAGS:\Zn $DETECTED_CPU_FLAGS
-\Zb MAKEOPTS:\Zn $DETECTED_MAKEOPTS
+\Zb CPU:\Zn        $DETECTED_CPU_MODEL
+\Zb -march:\Zn     $DETECTED_MARCH
+\Zb CPU_FLAGS:\Zn  $DETECTED_CPU_FLAGS
+\Zb MAKEOPTS:\Zn   $DETECTED_MAKEOPTS
 
-\Zb GPU:\Zn   $DETECTED_GPU_LABEL
+\Zb GPU:\Zn        $DETECTED_GPU_LABEL
 \Zb VIDEO_CARDS:\Zn \"$DETECTED_VIDEO_CARDS\"
 
-\Zb Disco:\Zn $DETECTED_DISK ($DETECTED_DISK_LABEL)
-\Zb Root FS:\Zn $DETECTED_FS
+\Zb Disco:\Zn      $DETECTED_DISK ($DETECTED_DISK_LABEL)
+\Zb Root FS:\Zn    $DETECTED_FS
+
+\Zb Pais IP:\Zn    $DETECTED_COUNTRY
+\Zb Mirror:\Zn     $DETECTED_MIRROR_LABEL
 ${ram_warn}
-\ZbPressione OK para continuar para o menu de configuração.\ZB
-Você pode revisar e alterar qualquer valor antes de salvar." \
-		22 72
+\ZbPressione OK — a proxima tela permite escolher o mirror.\ZB" \
+		26 76
 }
 
 
@@ -554,21 +639,25 @@ function load_default_config() {
 	SOVEREIGN_CFLAGS="-march=${DETECTED_MARCH:-native} -O2 -pipe"
 	SOVEREIGN_CPU_FLAGS="${DETECTED_CPU_FLAGS:-}"
 
-	# All settings are unsaved.
+	# Mirror detectado/selecionado automaticamente
+	GENTOO_MIRROR="${DETECTED_GENTOO_MIRROR:-https://mirror.leaseweb.com/gentoo/}"
 	UNSAVED_CHANGES=true
 }
 
 SAVE_AS_FILENAME="$RELA_CONFIG_FILE"
 
-# --- Sovereign Edition: detecta hardware antes de tudo ---
+# --- Sovereign Edition: detecta hardware e mirror antes de tudo ---
 sovereign_detect_hardware
+sovereign_detect_mirror
 
 if [[ -e "$CONFIG_FILE" ]]; then
 	load_config "$CONFIG_FILE"
 else
 	load_default_config
-	# Só mostra o resumo na primeira execução (sem config existente)
+	# 1. Resumo de hardware
 	sovereign_show_detection_summary
+	# 2. Selecao de mirror (com opcao de mudar)
+	sovereign_select_mirror
 fi
 process_config
 
