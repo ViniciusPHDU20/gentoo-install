@@ -74,7 +74,7 @@ print_step "Resolvendo dependencias e Dispatch-conf..."
 # Aplica automaticamente mudancas nos arquivos de configuracao gerados pelo autounmask
 echo "-5" | dispatch-conf || true
 
-# 4. INSTALACAO DO CORE (Hyprland, Waybar, Rofi, Kitty, Network)
+# 4. INSTALACAO DO CORE (Hyprland, Waybar, Rofi, Kitty, Network, Audio)
 print_step "Compilando o Nucleo do Hyprland e Ferramentas Visuais..."
 emerge --autounmask-continue --autounmask-write --update --newuse \
     gui-wm/hyprland \
@@ -92,10 +92,14 @@ emerge --autounmask-continue --autounmask-write --update --newuse \
     sys-auth/polkit-kde-agent \
     sys-process/btop \
     net-misc/networkmanager \
-    gnome-extra/nm-applet
+    gnome-extra/nm-applet \
+    media-video/pipewire \
+    media-sound/wireplumber
 
-# Habilitando o serviço do NetworkManager (e desabilitando o basico se necessario)
+# Habilitando servicos do Sistema e do Usuario (Network e Audio)
 systemctl enable NetworkManager || true
+# Habilita PipeWire globalmente para todos os usuarios (resolve o PC mudo)
+systemctl --global enable pipewire pipewire-pulse wireplumber || true
 
 # Aplica eventuais autounmask que rolaram acima
 echo "-5" | dispatch-conf || true
