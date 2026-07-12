@@ -213,7 +213,7 @@ PARTITIONING_BOOT_TYPES=(
 	"efi" "efi$([[ $HAS_EFI_SUPPORT == true ]] && echo -n "" || echo -n " (!! $EFI_UNSUPPORTED_MESSAGE_SHORT !!)")"
 	"bios" "bios"
 )
-PARTITIONING_ROOT_FS_TYPES=("ext4" "btrfs")
+PARTITIONING_ROOT_FS_TYPES=("ext4" "btrfs" "f2fs")
 PARTITIONING_BTRFS_RAID_TYPES=("raid0" "raid1")
 PARTITIONING_ZFS_POOL_TYPES=("standard" "custom")
 PARTITIONING_ZFS_COMPRESSIONS=("on" "gzip" "lz4" "lzjb" "zle" "zstd" "zstd-fast")
@@ -421,6 +421,8 @@ function load_default_config() {
 	function disk_configuration() {
 		#create_zfs_centric_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" encrypt=true compress=zstd pool_type=standard /dev/sdX
 		create_classic_single_disk_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" luks=true root_fs=ext4 /dev/sdX
+# Example for F2FS:
+# create_classic_single_disk_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" luks=true root_fs=f2fs /dev/sdX
 	}
 
 	STAGE3_VARIANT="systemd"
