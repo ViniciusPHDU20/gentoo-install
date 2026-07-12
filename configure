@@ -51,9 +51,114 @@ DEFAULT_BOOT_TYPE=$([[ $HAS_EFI_SUPPORT == true ]] && echo -n "efi" || echo -n "
 EFI_UNSUPPORTED_MESSAGE_SHORT="Missing EFI support on this system!"
 EFI_UNSUPPORTED_MESSAGE="Apparently, your system does NOT support efi. Double-check before proceeding!"
 
-# Wrap dialog in two functions to prevent it from cluttering stderr.
 function dialog_wrapper() { dialog_out=$(command dialog --colors "$@" 3>&2 2>&1 1>&3 3>&-); }
 function dialog() { dialog_wrapper "$@" 2>&1; }
+
+
+################################################
+# Sovereign Edition — Hardware Auto-Detection
+
+function sovereign_detect_hardware() {
+	# --- CPU ---
+	DETECTED_CPU_MODEL=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs 2>/dev/null || echo "Unknown")
+	DETECTED_CPU_CORES=$(nproc --all 2>/dev/null || echo 4)
+	DETECTED_MARCH=$(gcc -Q --help=target -march=native 2>/dev/null \
+		| grep -m1 '\-march=' | awk '{print $2}' | tr -d '[:space:]') || DETECTED_MARCH="native"
+	[[ -z "$DETECTED_MARCH" || "$DETECTED_MARCH" == "(null)" ]] && DETECTED_MARCH="native"
+
+	# CPU_FLAGS via cpuid2cpuflags ou fallback /proc/cpuinfo
+	if command -v cpuid2cpuflags &>/dev/null; then
+		DETECTED_CPU_FLAGS=$(cpuid2cpuflags 2>/dev/null | cut -d: -f2 | xargs)
+	else
+		local proc_flags
+		proc_flags=$(grep -m1 'flags' /proc/cpuinfo | cut -d: -f2 2>/dev/null || echo "")
+		DETECTED_CPU_FLAGS=""
+		for f in aes avx avx2 avx512f f16c fma mmx pclmulqdq popcnt rdrand sse sse2 sse3 sse4_1 sse4_2 ssse3; do
+			echo "$proc_flags" | grep -qw "$f" && DETECTED_CPU_FLAGS+="$f "
+		done
+		DETECTED_CPU_FLAGS=$(echo "$DETECTED_CPU_FLAGS" | xargs)
+	fi
+
+	# --- RAM e MAKEOPTS ---
+	local ram_mb
+	ram_mb=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}' 2>/dev/null || echo 4096)
+	local jobs_by_ram=$(( ram_mb / 2000 ))
+	[[ $jobs_by_ram -lt 1 ]] && jobs_by_ram=1
+	local jobs=$(( DETECTED_CPU_CORES < jobs_by_ram ? DETECTED_CPU_CORES : jobs_by_ram ))
+	local load_avg
+	load_avg=$(echo "scale=1; $DETECTED_CPU_CORES * 0.9" | bc 2>/dev/null || echo "$DETECTED_CPU_CORES")
+	DETECTED_MAKEOPTS="-j${jobs} -l${load_avg}"
+	DETECTED_RAM_MB="$ram_mb"
+
+	# --- GPU / VIDEO_CARDS ---
+	local gpu_info
+	gpu_info=$(lspci 2>/dev/null | grep -Ei '(VGA|3D|Display)' || echo "")
+	DETECTED_VIDEO_CARDS=""
+	DETECTED_GPU_LABEL="Nenhuma detectada (vesa)"
+
+	if echo "$gpu_info" | grep -qi "nvidia"; then
+		DETECTED_VIDEO_CARDS+="nvidia "
+		DETECTED_GPU_LABEL="NVIDIA (proprietário)"
+	fi
+	if echo "$gpu_info" | grep -qi "amd\|radeon\|amdgpu"; then
+		DETECTED_VIDEO_CARDS+="amdgpu radeonsi "
+		DETECTED_GPU_LABEL="AMD (amdgpu + Vulkan)"
+	fi
+	if echo "$gpu_info" | grep -qi "intel"; then
+		DETECTED_VIDEO_CARDS+="intel i965 "
+		DETECTED_GPU_LABEL="Intel (i915/i965)"
+	fi
+	if echo "$gpu_info" | grep -qi "nvidia" && echo "$gpu_info" | grep -qi "intel"; then
+		DETECTED_GPU_LABEL="Híbrido Intel+NVIDIA"
+	fi
+	DETECTED_VIDEO_CARDS=$(echo "$DETECTED_VIDEO_CARDS" | xargs)
+	[[ -z "$DETECTED_VIDEO_CARDS" ]] && DETECTED_VIDEO_CARDS="vesa"
+
+	# --- Disco / Filesystem recomendado ---
+	local nvme_dev
+	nvme_dev=$(ls /dev/nvme*n1 2>/dev/null | head -1 || echo "")
+	local sata_dev
+	sata_dev=$(ls /dev/sd[a-z] 2>/dev/null | head -1 || echo "")
+
+	if [[ -n "$nvme_dev" ]]; then
+		DETECTED_DISK="$nvme_dev"
+		DETECTED_FS="f2fs"
+		DETECTED_DISK_LABEL="NVMe → F2FS recomendado"
+	elif [[ -n "$sata_dev" ]]; then
+		DETECTED_DISK="$sata_dev"
+		DETECTED_FS="ext4"
+		DETECTED_DISK_LABEL="SSD/HDD SATA → ext4 recomendado"
+	else
+		DETECTED_DISK="/dev/sdX"
+		DETECTED_FS="ext4"
+		DETECTED_DISK_LABEL="Disco não detectado — configure manualmente"
+	fi
+}
+
+function sovereign_show_detection_summary() {
+	local ram_warn=""
+	[[ "$DETECTED_RAM_MB" -lt 8000 ]] && ram_warn="\n\Z1⚠ Menos de 8GB de RAM! Crie um swapfile antes de compilar pacotes grandes.\Zn"
+
+	dialog --colors \
+		--title "\ZbSovereign Edition — Hardware Detectado\ZB" \
+		--msgbox \
+"\Zb\Z2Detecção automática concluída!\ZB\Zn Todos os valores abaixo foram pré-configurados para \Zbesta máquina\ZB.
+
+\Zb CPU:\Zn  $DETECTED_CPU_MODEL
+\Zb -march:\Zn $DETECTED_MARCH
+\Zb CPU_FLAGS:\Zn $DETECTED_CPU_FLAGS
+\Zb MAKEOPTS:\Zn $DETECTED_MAKEOPTS
+
+\Zb GPU:\Zn   $DETECTED_GPU_LABEL
+\Zb VIDEO_CARDS:\Zn \"$DETECTED_VIDEO_CARDS\"
+
+\Zb Disco:\Zn $DETECTED_DISK ($DETECTED_DISK_LABEL)
+\Zb Root FS:\Zn $DETECTED_FS
+${ram_warn}
+\ZbPressione OK para continuar para o menu de configuração.\ZB
+Você pode revisar e alterar qualquer valor antes de salvar." \
+		22 72
+}
 
 
 ################################################
@@ -418,11 +523,9 @@ function load_default_config() {
 	SYSTEMD_NETWORKD_GATEWAY="192.168.1.1"
 	SYSTEMD_INITRAMFS_SSHD=false
 
+	# --- Sovereign: usa disco e FS detectados pelo hardware_detect ---
 	function disk_configuration() {
-		#create_zfs_centric_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" encrypt=true compress=zstd pool_type=standard /dev/sdX
-		create_classic_single_disk_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" luks=true root_fs=ext4 /dev/sdX
-# Example for F2FS:
-# create_classic_single_disk_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" luks=true root_fs=f2fs /dev/sdX
+		create_classic_single_disk_layout swap=8GiB type="$DEFAULT_BOOT_TYPE" luks=false root_fs="${DETECTED_FS:-ext4}" "${DETECTED_DISK:-/dev/sdX}"
 	}
 
 	STAGE3_VARIANT="systemd"
@@ -438,21 +541,34 @@ function load_default_config() {
 	SELECT_MIRRORS=false
 	SELECT_MIRRORS_LARGE_FILE=false
 
+	# --- Sovereign: MAKEOPTS e VIDEO_CARDS detectados automaticamente ---
 	ADDITIONAL_PACKAGES=()
 	ENABLE_SSHD=true
 	ENABLE_BINPKG=false
 	KERNEL_TYPE=bin
 	ROOT_SSH_AUTHORIZED_KEYS=""
 
+	# Variáveis extras do Sovereign Edition (gravadas no gentoo.conf)
+	SOVEREIGN_MAKEOPTS="${DETECTED_MAKEOPTS:--j4 -l4}"
+	SOVEREIGN_VIDEO_CARDS="${DETECTED_VIDEO_CARDS:-vesa}"
+	SOVEREIGN_CFLAGS="-march=${DETECTED_MARCH:-native} -O2 -pipe"
+	SOVEREIGN_CPU_FLAGS="${DETECTED_CPU_FLAGS:-}"
+
 	# All settings are unsaved.
 	UNSAVED_CHANGES=true
 }
 
 SAVE_AS_FILENAME="$RELA_CONFIG_FILE"
+
+# --- Sovereign Edition: detecta hardware antes de tudo ---
+sovereign_detect_hardware
+
 if [[ -e "$CONFIG_FILE" ]]; then
 	load_config "$CONFIG_FILE"
 else
 	load_default_config
+	# Só mostra o resumo na primeira execução (sem config existente)
+	sovereign_show_detection_summary
 fi
 process_config
 
