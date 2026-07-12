@@ -245,6 +245,193 @@ ${ram_warn}
 		26 76
 }
 
+function sovereign_lang_init() {
+	# Primeira coisa: escolha do idioma
+	local result
+	result=$(command dialog \
+		--title "Language / Idioma" \
+		--ok-label "OK" \
+		--radiolist \
+"Select the interface language.
+Selecione o idioma da interface.
+
+Use Space to select, Enter to confirm.
+Use Espaco para selecionar, Enter para confirmar." \
+		12 60 2 \
+		"en" "English" "off" \
+		"pt" "Portugues (Brasil)" "on" \
+		3>&1 1>&2 2>&3) || true
+
+	SOVEREIGN_LANG="${result:-pt}"
+}
+
+function sovereign_select_profile() {
+	if [[ "$SOVEREIGN_LANG" == "pt" ]]; then
+		local title="Sovereign Edition — Perfil de Instalacao"
+		local desc="Qual tipo de sistema voce quer instalar?
+
+Use Espaco para selecionar, Enter para confirmar."
+		local lbl_minimal="Gentoo Minimal"
+		local lbl_minimal_desc="Apenas sistema base. Sem desktop. Voce configura tudo depois."
+		local lbl_jakoolit="Gentoo + Hyprland (JaKooLit)  <- RECOMENDADO"
+		local lbl_jakoolit_desc="Base + Hyprland + Waybar + Rofi + dotfiles JaKooLit."
+		local lbl_custom="Personalizado"
+		local lbl_custom_desc="Voce digita os pacotes adicionais manualmente."
+		local ok_label="Confirmar"
+	else
+		local title="Sovereign Edition — Installation Profile"
+		local desc="What kind of system do you want to install?
+
+Use Space to select, Enter to confirm."
+		local lbl_minimal="Gentoo Minimal"
+		local lbl_minimal_desc="Base system only. No desktop. You configure everything later."
+		local lbl_jakoolit="Gentoo + Hyprland (JaKooLit)  <- RECOMMENDED"
+		local lbl_jakoolit_desc="Base + Hyprland + Waybar + Rofi + JaKooLit dotfiles."
+		local lbl_custom="Custom"
+		local lbl_custom_desc="You type the additional packages manually."
+		local ok_label="Confirm"
+	fi
+
+	local result
+	result=$(command dialog --colors \
+		--title "\Zb${title}\ZB" \
+		--ok-label "$ok_label" \
+		--cancel-label "Skip" \
+		--radiolist "$desc" \
+		16 72 3 \
+		"minimal"  "$lbl_minimal — $lbl_minimal_desc"  "off" \
+		"jakoolit" "$lbl_jakoolit — $lbl_jakoolit_desc" "on" \
+		"custom"   "$lbl_custom — $lbl_custom_desc"    "off" \
+		3>&1 1>&2 2>&3) || result="jakoolit"
+
+	SOVEREIGN_PROFILE="${result:-jakoolit}"
+
+	case "$SOVEREIGN_PROFILE" in
+		"minimal")
+			ADDITIONAL_PACKAGES=()
+			;;
+		"jakoolit")
+			# Pacotes base do ambiente Hyprland/JaKooLit no Gentoo
+			ADDITIONAL_PACKAGES=(
+				"gui-wm/hyprland"
+				"gui-apps/waybar"
+				"gui-apps/wofi"
+				"gui-apps/swaylock"
+				"gui-apps/grim"
+				"gui-apps/slurp"
+				"gui-apps/wl-clipboard"
+				"gui-apps/mako"
+				"x11-terms/kitty"
+				"x11-misc/xdg-user-dirs"
+				"media-fonts/noto"
+				"gui-apps/swww"
+			)
+			# JaKooLit exige systemd — forca caso ainda esteja em openrc
+			[[ "$STAGE3_VARIANT" == *openrc* ]] && STAGE3_VARIANT="systemd"
+			;;
+		"custom")
+			# Abre inputbox para o usuario digitar manualmente (comportamento original)
+			local custom_input
+			if command dialog \
+				--title "$title" \
+				--inputbox "Digite os pacotes adicionais separados por espaco:\n(ex: app-editors/neovim sys-apps/ripgrep)" \
+				10 72 "" \
+				3>&1 1>&2 2>&3; then
+				custom_input=$(command dialog \
+					--title "$title" \
+					--inputbox "Digite os pacotes adicionais separados por espaco:\n(ex: app-editors/neovim sys-apps/ripgrep)" \
+					10 72 "" \
+					3>&1 1>&2 2>&3 2>/dev/null) || true
+				ADDITIONAL_PACKAGES=($custom_input)
+			fi
+			;;
+	esac
+}
+
+function sovereign_apply_translations() {
+	# Redefine APENAS as strings visíveis (tag/label/help) do menu TUI original.
+	# NÃO toca em nenhuma lógica, variável ou estrutura do projeto original.
+	[[ "$SOVEREIGN_LANG" != "pt" ]] && return 0
+
+	# --- Particionamento ---
+	function PARTITIONING_SCHEME_tag()  { echo "Esquema de particionamento"; }
+	function PARTITIONING_SCHEME_help() { echo "Selecione o esquema de particionamento desejado."; }
+	function PARTITIONING_BOOT_TYPE_tag()  { echo "Tipo de boot"; }
+	function PARTITIONING_BOOT_TYPE_help() { echo "Selecione EFI (recomendado para sistemas modernos) ou BIOS (legado)."; }
+	function PARTITIONING_USE_SWAP_tag()  { echo "Usar swap"; }
+	function PARTITIONING_USE_SWAP_help() { echo "Ativar partição/arquivo de swap para memória virtual."; }
+	function PARTITIONING_SWAP_tag()  { echo "Tamanho do swap"; }
+	function PARTITIONING_SWAP_help() { echo "Defina o tamanho do swap (ex: 8GiB). Recomendado: pelo menos igual à RAM para compilações pesadas."; }
+	function PARTITIONING_ROOT_FS_tag()  { echo "Sistema de arquivos raiz"; }
+	function PARTITIONING_ROOT_FS_help() { echo "Escolha o sistema de arquivos para a partição raiz. F2FS é recomendado para NVMe. ext4 é o mais estável para HDs."; }
+	function PARTITIONING_USE_LUKS_tag()  { echo "Criptografia LUKS"; }
+	function PARTITIONING_USE_LUKS_help() { echo "Ativar criptografia LUKS na partição raiz. Protege seus dados em caso de perda do dispositivo."; }
+	function PARTITIONING_DEVICE_tag()  { echo "Dispositivo de destino"; }
+	function PARTITIONING_DEVICE_help() { echo "Selecione o disco onde o Gentoo será instalado. ATENÇÃO: todos os dados serão apagados!"; }
+	function PARTITIONING_DEVICES_tag()  { echo "Dispositivos de destino (RAID/ZFS)"; }
+	function PARTITIONING_ZFS_POOL_TYPE_tag()  { echo "Tipo de pool ZFS"; }
+	function PARTITIONING_ZFS_USE_ENCRYPTION_tag()  { echo "Criptografia ZFS"; }
+	function PARTITIONING_ZFS_USE_COMPRESSION_tag() { echo "Compressao ZFS"; }
+	function PARTITIONING_ZFS_COMPRESSION_tag()     { echo "Algoritmo de compressao ZFS"; }
+	function PARTITIONING_BTRFS_RAID_TYPE_tag()     { echo "Tipo de RAID Btrfs"; }
+	function PARTITIONING_BOOT_DEVICE_tag()         { echo "Dispositivo de boot"; }
+
+	# --- Sistema ---
+	function HOSTNAME_tag()  { echo "Nome do host"; }
+	function HOSTNAME_help() { echo "Define o hostname (nome) do novo sistema."; }
+	function TIMEZONE_tag()  { echo "Fuso horario"; }
+	function TIMEZONE_help() { echo "Selecione o fuso horário. Brasil: America/Sao_Paulo."; }
+	function KEYMAP_tag()  { echo "Layout do teclado"; }
+	function KEYMAP_help() { echo "Selecione o layout do teclado para o console. Português BR: br-abnt2."; }
+	function KEYMAP_INITRAMFS_OTHER_tag()  { echo "Layout diferente no initramfs"; }
+	function KEYMAP_INITRAMFS_OTHER_help() { echo "Ativar se quiser um layout de teclado diferente no initramfs (durante o boot)."; }
+	function KEYMAP_INITRAMFS_tag()  { echo "Layout do teclado no initramfs"; }
+	function LOCALES_tag()  { echo "Locales do sistema"; }
+	function LOCALES_help() { echo "Selecione os locales a gerar. Para português: pt_BR.UTF-8 UTF-8."; }
+	function LOCALE_tag()  { echo "Locale padrao"; }
+	function LOCALE_help() { echo "Define o locale padrão do sistema. Recomendado: pt_BR.UTF-8 ou C.UTF-8."; }
+
+	# --- Rede ---
+	function SYSTEMD_NETWORKD_tag()  { echo "Rede automatica (systemd-networkd)"; }
+	function SYSTEMD_NETWORKD_help() { echo "Ativar configuração automática de rede via systemd-networkd. Recomendado para a maioria dos sistemas."; }
+	function SYSTEMD_NETWORKD_DHCP_tag()  { echo "DHCP automatico"; }
+	function SYSTEMD_NETWORKD_DHCP_help() { echo "Usar DHCP para obter IP automaticamente. Desative para configurar IP fixo."; }
+	function SYSTEMD_NETWORKD_INTERFACE_NAME_tag()  { echo "Nome da interface de rede"; }
+	function SYSTEMD_NETWORKD_ADDRESSES_tag()  { echo "Enderecos IP fixos"; }
+	function SYSTEMD_NETWORKD_GATEWAY_tag()    { echo "Gateway padrao"; }
+	function SYSTEMD_INITRAMFS_SSHD_tag()      { echo "SSH no initramfs"; }
+	function SYSTEMD_INITRAMFS_SSHD_help()     { echo "Iniciar servidor SSH durante o boot (initramfs). Útil para desbloqueio remoto de LUKS."; }
+
+	# --- Portage e instalacao ---
+	function STAGE3_VARIANT_tag()  { echo "Variante do Stage3 (init system)"; }
+	function STAGE3_VARIANT_help() { echo "Selecione o tarball base do Gentoo. Determina o init system (systemd ou OpenRC). Recomendado: systemd para uso com Hyprland/JaKooLit."; }
+	function PORTAGE_SYNC_TYPE_tag()  { echo "Tipo de sincronizacao do Portage"; }
+	function PORTAGE_SYNC_TYPE_help() { echo "git é mais rápido para atualizações incrementais. rsync é o método clássico."; }
+	function PORTAGE_GIT_FULL_HISTORY_tag()  { echo "Historico git completo do Portage"; }
+	function PORTAGE_GIT_MIRROR_tag()  { echo "Mirror git do Portage"; }
+	function GENTOO_MIRROR_tag()  { echo "Mirror de download do Gentoo"; }
+	function GENTOO_MIRROR_help() { echo "URL do mirror para baixar o stage3 e os pacotes. Selecione um próximo de você para maior velocidade."; }
+	function GENTOO_ARCH_tag()    { echo "Arquitetura do sistema"; }
+	function GENTOO_SUBARCH_tag() { echo "Sub-arquitetura"; }
+	function USE_PORTAGE_TESTING_tag()  { echo "Aceitar pacotes de teste (~amd64)"; }
+	function USE_PORTAGE_TESTING_help() { echo "Permite instalar versões mais recentes (testing) dos pacotes. Recomendado para hardware moderno."; }
+	function SELECT_MIRRORS_tag()           { echo "Selecionar mirrors automaticamente"; }
+	function SELECT_MIRRORS_help()          { echo "Usar mirrorselect para encontrar os mirrors mais rápidos automaticamente."; }
+	function SELECT_MIRRORS_LARGE_FILE_tag() { echo "Teste com arquivo grande"; }
+
+	# --- Opcoes finais ---
+	function ENABLE_SSHD_tag()  { echo "Instalar e ativar SSH"; }
+	function ENABLE_SSHD_help() { echo "Instala o servidor SSH com configuracao segura (apenas chaves ed25519, sem senha)."; }
+	function ENABLE_BINPKG_tag()  { echo "Usar pacotes pre-compilados (binpkg)"; }
+	function ENABLE_BINPKG_help() { echo "Quando disponivel, baixa pacotes ja compilados em vez de compilar do zero. Acelera muito a instalacao."; }
+	function KERNEL_TYPE_tag()  { echo "Tipo de kernel"; }
+	function KERNEL_TYPE_help() { echo "'bin' instala o kernel pre-compilado (rapido). 'source' compila o kernel localmente (mais lento, mas otimizado)."; }
+	function ROOT_SSH_AUTHORIZED_KEYS_tag()  { echo "Chaves SSH autorizadas para root"; }
+	function ROOT_SSH_AUTHORIZED_KEYS_help() { echo "Cole aqui as chaves publicas SSH que terao acesso root apos a instalacao."; }
+	function ADDITIONAL_PACKAGES_tag()  { echo "Pacotes adicionais"; }
+	function ADDITIONAL_PACKAGES_help() { echo "Pacotes extras a instalar no final. Ja pre-preenchido pelo perfil selecionado. Mantenha ao minimo."; }
+}
+
 
 ################################################
 # Configuration helper functions
@@ -646,7 +833,11 @@ function load_default_config() {
 
 SAVE_AS_FILENAME="$RELA_CONFIG_FILE"
 
-# --- Sovereign Edition: detecta hardware e mirror antes de tudo ---
+# --- Sovereign Edition: fluxo de inicializacao ---
+# 1. Idioma (primeira coisa — define SOVEREIGN_LANG)
+sovereign_lang_init
+
+# 2. Hardware + mirror (silencioso)
 sovereign_detect_hardware
 sovereign_detect_mirror
 
@@ -654,12 +845,19 @@ if [[ -e "$CONFIG_FILE" ]]; then
 	load_config "$CONFIG_FILE"
 else
 	load_default_config
-	# 1. Resumo de hardware
+	# 3. Resumo de hardware detectado
 	sovereign_show_detection_summary
-	# 2. Selecao de mirror (com opcao de mudar)
+	# 4. Selecao de mirror com opcao de mudar
 	sovereign_select_mirror
+	# 5. Perfil: Minimal / JaKooLit / Personalizado
+	sovereign_select_profile
 fi
+
+# 6. Aplica traducoes PT (redefine strings do menu TUI se SOVEREIGN_LANG=pt)
+sovereign_apply_translations
+
 process_config
+
 
 
 ################################################
