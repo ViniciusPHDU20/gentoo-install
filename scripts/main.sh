@@ -92,6 +92,41 @@ function configure_portage() {
 	touch_or_die 0644 "/etc/portage/package.keywords/zz-autounmask"
 	touch_or_die 0644 "/etc/portage/package.license"
 
+	# --- Sovereign Edition: aplica otimizacoes de hardware no make.conf ---
+	# Estas variaveis sao detectadas automaticamente pelo hardware_detect
+	# e salvas no gentoo.conf pelo ./configure antes da instalacao.
+	if [[ -n "${SOVEREIGN_CFLAGS:-}" ]]; then
+		einfo "Sovereign: aplicando CFLAGS nativos: ${SOVEREIGN_CFLAGS}"
+		# Remove entradas antigas para evitar duplicatas
+		sed -i '/^CFLAGS=/d;/^CXXFLAGS=/d;/^FCFLAGS=/d;/^FFLAGS=/d' /etc/portage/make.conf
+		cat >> /etc/portage/make.conf <<EOF
+
+# Sovereign Edition — Compilacao nativa para este hardware
+CFLAGS="${SOVEREIGN_CFLAGS}"
+CXXFLAGS="\${CFLAGS}"
+FCFLAGS="\${CFLAGS}"
+FFLAGS="\${CFLAGS}"
+EOF
+	fi
+
+	if [[ -n "${SOVEREIGN_CPU_FLAGS:-}" ]]; then
+		einfo "Sovereign: aplicando CPU_FLAGS_X86: ${SOVEREIGN_CPU_FLAGS}"
+		sed -i '/^CPU_FLAGS_X86=/d' /etc/portage/make.conf
+		echo "CPU_FLAGS_X86=\"${SOVEREIGN_CPU_FLAGS}\"" >> /etc/portage/make.conf
+	fi
+
+	if [[ -n "${SOVEREIGN_MAKEOPTS:-}" ]]; then
+		einfo "Sovereign: aplicando MAKEOPTS: ${SOVEREIGN_MAKEOPTS}"
+		sed -i '/^MAKEOPTS=/d' /etc/portage/make.conf
+		echo "MAKEOPTS=\"${SOVEREIGN_MAKEOPTS}\"" >> /etc/portage/make.conf
+	fi
+
+	if [[ -n "${SOVEREIGN_VIDEO_CARDS:-}" ]]; then
+		einfo "Sovereign: aplicando VIDEO_CARDS: ${SOVEREIGN_VIDEO_CARDS}"
+		sed -i '/^VIDEO_CARDS=/d' /etc/portage/make.conf
+		echo "VIDEO_CARDS=\"${SOVEREIGN_VIDEO_CARDS}\"" >> /etc/portage/make.conf
+	fi
+
 	if [[ $SELECT_MIRRORS == "true" ]]; then
 		einfo "Temporarily installing mirrorselect"
 		try emerge --verbose --oneshot app-portage/mirrorselect
@@ -112,6 +147,7 @@ function configure_portage() {
 	chmod 644 /etc/portage/make.conf \
 		|| die "Could not chmod 644 /etc/portage/make.conf"
 }
+
 
 function enable_sshd() {
 	einfo "Installing and enabling sshd"

@@ -2231,6 +2231,20 @@ ROOT_SSH_AUTHORIZED_KEYS=${ROOT_SSH_AUTHORIZED_KEYS@Q}
 
 
 ################################################
+# Sovereign Edition — Hardware Optimizations
+# Gerado automaticamente pelo hardware_detect
+# NAO edite manualmente — rode ./configure novamente
+
+SOVEREIGN_MAKEOPTS=${SOVEREIGN_MAKEOPTS@Q}
+SOVEREIGN_VIDEO_CARDS=${SOVEREIGN_VIDEO_CARDS@Q}
+SOVEREIGN_CFLAGS=${SOVEREIGN_CFLAGS@Q}
+SOVEREIGN_CPU_FLAGS=${SOVEREIGN_CPU_FLAGS@Q}
+SOVEREIGN_ZRAM=${SOVEREIGN_ZRAM@Q}
+SOVEREIGN_ZRAM_SIZE=${SOVEREIGN_ZRAM_SIZE@Q}
+SOVEREIGN_PROFILE=${SOVEREIGN_PROFILE@Q}
+
+
+################################################
 # Prove that you have read the config
 
 I_HAVE_READ_AND_EDITED_THE_CONFIG_PROPERLY=true
