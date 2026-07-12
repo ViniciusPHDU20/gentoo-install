@@ -355,82 +355,139 @@ function sovereign_apply_translations() {
 
 	# --- Particionamento ---
 	function PARTITIONING_SCHEME_tag()  { echo "Esquema de particionamento"; }
-	function PARTITIONING_SCHEME_help() { echo "Selecione o esquema de particionamento desejado."; }
+	function PARTITIONING_SCHEME_help() { echo "Selecione o esquema de particionamento desejado. 'Classic single disk' é o mais simples e recomendado para a maioria. ZFS e Btrfs oferecem snapshots e RAID. 'Custom' é para usuários avançados."; }
+
 	function PARTITIONING_BOOT_TYPE_tag()  { echo "Tipo de boot"; }
-	function PARTITIONING_BOOT_TYPE_help() { echo "Selecione EFI (recomendado para sistemas modernos) ou BIOS (legado)."; }
+	function PARTITIONING_BOOT_TYPE_help() { echo "EFI é recomendado para qualquer sistema fabricado após 2012. BIOS (Legacy) é para hardware mais antigo ou VMs sem suporte UEFI."; }
+
+	function PARTITIONING_BOOT_DEVICE_tag()  { echo "Dispositivo de boot (EFI)"; }
+	function PARTITIONING_BOOT_DEVICE_help() { echo "Dispositivo usado para a partição de boot/EFI. Em sistemas EFI, esta é a partição EFI. Deve estar previamente formatada como FAT32."; }
+
 	function PARTITIONING_USE_SWAP_tag()  { echo "Usar swap"; }
-	function PARTITIONING_USE_SWAP_help() { echo "Ativar partição/arquivo de swap para memória virtual."; }
+	function PARTITIONING_USE_SWAP_help() { echo "Ativar partição de swap para memória virtual. Recomendado: ativar com pelo menos 8GB para suportar compilações pesadas (Firefox, LLVM) sem travar."; }
+
 	function PARTITIONING_SWAP_tag()  { echo "Tamanho do swap"; }
-	function PARTITIONING_SWAP_help() { echo "Defina o tamanho do swap (ex: 8GiB). Recomendado: pelo menos igual à RAM para compilações pesadas."; }
+	function PARTITIONING_SWAP_help() { echo "Tamanho da partição de swap (ex: 8GiB). Recomendado: igual à sua RAM. Com 8GB de RAM → 8GiB de swap. Importante para evitar travamentos durante compilações."; }
+
+	function PARTITIONING_SWAP_DEVICE_tag()  { echo "Dispositivo de swap"; }
+	function PARTITIONING_SWAP_DEVICE_help() { echo "Dispositivo a ser usado como swap. Normalmente é uma partição do mesmo disco de instalação."; }
+
 	function PARTITIONING_ROOT_FS_tag()  { echo "Sistema de arquivos raiz"; }
-	function PARTITIONING_ROOT_FS_help() { echo "Escolha o sistema de arquivos para a partição raiz. F2FS é recomendado para NVMe. ext4 é o mais estável para HDs."; }
+	function PARTITIONING_ROOT_FS_help() { echo "Sistema de arquivos da partição raiz:\n  f2fs  → Ideal para NVMe/SSD (mais rápido, maior vida útil)\n  ext4  → Estável e universal (HDs e SSDs SATA)\n  btrfs → Suporte a snapshots e compressão\n  ZFS   → Avançado: RAID, snapshots, compressão"; }
+
 	function PARTITIONING_USE_LUKS_tag()  { echo "Criptografia LUKS"; }
-	function PARTITIONING_USE_LUKS_help() { echo "Ativar criptografia LUKS na partição raiz. Protege seus dados em caso de perda do dispositivo."; }
-	function PARTITIONING_DEVICE_tag()  { echo "Dispositivo de destino"; }
-	function PARTITIONING_DEVICE_help() { echo "Selecione o disco onde o Gentoo será instalado. ATENÇÃO: todos os dados serão apagados!"; }
-	function PARTITIONING_DEVICES_tag()  { echo "Dispositivos de destino (RAID/ZFS)"; }
+	function PARTITIONING_USE_LUKS_help() { echo "Ativar criptografia LUKS na partição raiz. Todos os dados serão criptografados — uma senha será pedida a cada boot. Protege seus dados em caso de roubo ou perda do dispositivo."; }
+
+	function PARTITIONING_DEVICE_tag()  { echo "Disco de destino"; }
+	function PARTITIONING_DEVICE_help() { echo "Disco onde o Gentoo será instalado. ATENÇÃO: TODOS OS DADOS DESTE DISCO SERÃO APAGADOS! Verifique o dispositivo correto antes de continuar (ex: /dev/nvme0n1 ou /dev/sda)."; }
+
+	function PARTITIONING_DEVICES_tag()  { echo "Discos de destino (RAID/ZFS multi-disco)"; }
+	function PARTITIONING_DEVICES_help() { echo "Lista de dispositivos de bloco para layouts com múltiplos discos (RAID0, RAID1, ZFS pool). Informe um por linha."; }
+
 	function PARTITIONING_ZFS_POOL_TYPE_tag()  { echo "Tipo de pool ZFS"; }
-	function PARTITIONING_ZFS_USE_ENCRYPTION_tag()  { echo "Criptografia ZFS"; }
+	function PARTITIONING_ZFS_POOL_TYPE_help() { echo "'standard' cria um pool ZFS padrão com compressão ZSTD em todos os discos fornecidos. 'custom' exige que você escreva sua própria função de criação de pool no arquivo de configuração — apenas para usuários avançados."; }
+
+	function PARTITIONING_ZFS_USE_ENCRYPTION_tag()  { echo "Criptografia ZFS nativa"; }
+	function PARTITIONING_ZFS_USE_ENCRYPTION_help()  { echo "Ativa criptografia nativa do ZFS na partição raiz. Você pode exportar a chave via 'export GENTOO_INSTALL_ENCRYPTION_KEY=...' antes de instalar para não ser perguntado durante a instalação."; }
+
 	function PARTITIONING_ZFS_USE_COMPRESSION_tag() { echo "Compressao ZFS"; }
+	function PARTITIONING_ZFS_USE_COMPRESSION_help() { echo "Ativa compressão transparente nos datasets ZFS. Geralmente melhora a performance e economiza espaço com impacto mínimo na CPU."; }
+
 	function PARTITIONING_ZFS_COMPRESSION_tag()     { echo "Algoritmo de compressao ZFS"; }
+	function PARTITIONING_ZFS_COMPRESSION_help()     { echo "Algoritmo de compressão usado nos datasets ZFS. 'on' usa o padrão do ZFS (lz4). Para controle granular de nível (gzip-N, zstd-N) use um pool customizado."; }
+
 	function PARTITIONING_BTRFS_RAID_TYPE_tag()     { echo "Tipo de RAID Btrfs"; }
-	function PARTITIONING_BOOT_DEVICE_tag()         { echo "Dispositivo de boot"; }
+	function PARTITIONING_BTRFS_RAID_TYPE_help()     { echo "Define o tipo do pool Btrfs. 'single' para disco único, 'raid0' para velocidade (sem redundância), 'raid1' para espelhamento (com redundância)."; }
 
 	# --- Sistema ---
-	function HOSTNAME_tag()  { echo "Nome do host"; }
-	function HOSTNAME_help() { echo "Define o hostname (nome) do novo sistema."; }
+	function HOSTNAME_tag()  { echo "Nome do host (hostname)"; }
+	function HOSTNAME_help() { echo "Define o nome de identificação do sistema na rede. Use apenas letras minúsculas, números e hífens (ex: meu-gentoo, desktop-jesus)."; }
+
 	function TIMEZONE_tag()  { echo "Fuso horario"; }
-	function TIMEZONE_help() { echo "Selecione o fuso horário. Brasil: America/Sao_Paulo."; }
-	function KEYMAP_tag()  { echo "Layout do teclado"; }
-	function KEYMAP_help() { echo "Selecione o layout do teclado para o console. Português BR: br-abnt2."; }
+	function TIMEZONE_help() { echo "Fuso horário do sistema. Brasil: America/Sao_Paulo. Você pode digitar o nome diretamente (ex: America/Fortaleza, America/Manaus) ou pressionar espaço para listar todos."; }
+
+	function KEYMAP_tag()  { echo "Layout do teclado (console)"; }
+	function KEYMAP_help() { echo "Layout do teclado para o console (TTY). Teclado ABNT2 (padrão brasileiro): br-abnt2. Teclado US ANSI: us. Este layout é usado fora do ambiente gráfico."; }
+
 	function KEYMAP_INITRAMFS_OTHER_tag()  { echo "Layout diferente no initramfs"; }
-	function KEYMAP_INITRAMFS_OTHER_help() { echo "Ativar se quiser um layout de teclado diferente no initramfs (durante o boot)."; }
+	function KEYMAP_INITRAMFS_OTHER_help() { echo "Ativar se quiser um layout de teclado diferente durante o boot (initramfs). Útil quando você usa LUKS e o layout padrão não funciona para digitar a senha."; }
+
 	function KEYMAP_INITRAMFS_tag()  { echo "Layout do teclado no initramfs"; }
-	function LOCALES_tag()  { echo "Locales do sistema"; }
-	function LOCALES_help() { echo "Selecione os locales a gerar. Para português: pt_BR.UTF-8 UTF-8."; }
-	function LOCALE_tag()  { echo "Locale padrao"; }
-	function LOCALE_help() { echo "Define o locale padrão do sistema. Recomendado: pt_BR.UTF-8 ou C.UTF-8."; }
+	function KEYMAP_INITRAMFS_help() { echo "Layout do teclado usado durante o boot inicial (initramfs). Importante se você usa criptografia LUKS e precisa digitar a senha corretamente no boot."; }
+
+	function LOCALES_tag()  { echo "Locales a gerar"; }
+	function LOCALES_help() { echo "Lista de locales a gerar no sistema. Para português brasileiro adicione: pt_BR.UTF-8 UTF-8. Para inglês universal (seguro): C.UTF-8 UTF-8. Separe múltiplos locales com espaço."; }
+
+	function LOCALE_tag()  { echo "Locale padrao do sistema"; }
+	function LOCALE_help() { echo "Locale padrão usado pelo sistema e pelos programas. 'pt_BR.UTF-8' para português brasileiro completo. 'C.UTF-8' para neutro/inglês sem caracteres especiais."; }
 
 	# --- Rede ---
 	function SYSTEMD_NETWORKD_tag()  { echo "Rede automatica (systemd-networkd)"; }
-	function SYSTEMD_NETWORKD_help() { echo "Ativar configuração automática de rede via systemd-networkd. Recomendado para a maioria dos sistemas."; }
-	function SYSTEMD_NETWORKD_DHCP_tag()  { echo "DHCP automatico"; }
-	function SYSTEMD_NETWORKD_DHCP_help() { echo "Usar DHCP para obter IP automaticamente. Desative para configurar IP fixo."; }
+	function SYSTEMD_NETWORKD_help() { echo "Configura a rede automaticamente via systemd-networkd. Recomendado para a maioria dos sistemas. Desative apenas se quiser configurar a rede manualmente depois da instalação."; }
+
+	function SYSTEMD_NETWORKD_DHCP_tag()  { echo "Obter IP automaticamente (DHCP)"; }
+	function SYSTEMD_NETWORKD_DHCP_help() { echo "Usar DHCP para obter endereço IP automaticamente do roteador. Desative para configurar IP fixo (estático) — informe o IP, máscara e gateway manualmente."; }
+
 	function SYSTEMD_NETWORKD_INTERFACE_NAME_tag()  { echo "Nome da interface de rede"; }
+	function SYSTEMD_NETWORKD_INTERFACE_NAME_help()  { echo "Nome da interface de rede a configurar. 'en*' configura todas as interfaces com fio automaticamente (recomendado). Para especificar uma interface: eth0, enp3s0, etc."; }
+
 	function SYSTEMD_NETWORKD_ADDRESSES_tag()  { echo "Enderecos IP fixos"; }
-	function SYSTEMD_NETWORKD_GATEWAY_tag()    { echo "Gateway padrao"; }
-	function SYSTEMD_INITRAMFS_SSHD_tag()      { echo "SSH no initramfs"; }
-	function SYSTEMD_INITRAMFS_SSHD_help()     { echo "Iniciar servidor SSH durante o boot (initramfs). Útil para desbloqueio remoto de LUKS."; }
+	function SYSTEMD_NETWORKD_ADDRESSES_help()  { echo "Lista de endereços IP com máscara CIDR a atribuir à interface (ex: 192.168.1.100/24). Separe múltiplos endereços com espaço. Usado apenas quando DHCP está desativado."; }
+
+	function SYSTEMD_NETWORKD_GATEWAY_tag()    { echo "Gateway padrao (roteador)"; }
+	function SYSTEMD_NETWORKD_GATEWAY_help()    { echo "Endereço IP do gateway padrão da rede (normalmente o IP do seu roteador). Ex: 192.168.1.1. Usado apenas quando DHCP está desativado."; }
+
+	function SYSTEMD_INITRAMFS_SSHD_tag()      { echo "SSH durante o boot (initramfs)"; }
+	function SYSTEMD_INITRAMFS_SSHD_help()     { echo "Inicia um servidor SSH durante o boot no initramfs. Útil para desbloquear remotamente uma partição LUKS criptografada sem acesso físico ao sistema."; }
 
 	# --- Portage e instalacao ---
 	function STAGE3_VARIANT_tag()  { echo "Variante do Stage3 (init system)"; }
-	function STAGE3_VARIANT_help() { echo "Selecione o tarball base do Gentoo. Determina o init system (systemd ou OpenRC). Recomendado: systemd para uso com Hyprland/JaKooLit."; }
-	function PORTAGE_SYNC_TYPE_tag()  { echo "Tipo de sincronizacao do Portage"; }
-	function PORTAGE_SYNC_TYPE_help() { echo "git é mais rápido para atualizações incrementais. rsync é o método clássico."; }
+	function STAGE3_VARIANT_help() { echo "Seleciona o tarball base Gentoo a usar. Define o init system:\n  systemd → Recomendado. Necessário para Hyprland/JaKooLit.\n  openrc  → Mais leve, tradicional Gentoo.\n  musl    → Libc alternativa (experimental).\n  hardened → Segurança máxima (experimental).\nAtenção: variantes não testadas podem gerar conflitos no emerge."; }
+
+	function PORTAGE_SYNC_TYPE_tag()  { echo "Metodo de sincronizacao do Portage"; }
+	function PORTAGE_SYNC_TYPE_help() { echo "Como o Portage (gerenciador de pacotes do Gentoo) sincroniza a árvore de ebuilds:\n  git   → Mais rápido para atualizações incrementais (recomendado).\n  rsync → Método clássico e estável."; }
+
 	function PORTAGE_GIT_FULL_HISTORY_tag()  { echo "Historico git completo do Portage"; }
+	function PORTAGE_GIT_FULL_HISTORY_help()  { echo "Baixa o histórico git completo da árvore do Portage. Ocupa 1-2GB extras de disco sem benefício prático para a maioria dos usuários. Mantenha desativado, a menos que você precise de histórico antigo."; }
+
 	function PORTAGE_GIT_MIRROR_tag()  { echo "Mirror git do Portage"; }
+	function PORTAGE_GIT_MIRROR_help()  { echo "Endpoint git usado para sincronizar a árvore do Portage. Normalmente não precisa ser alterado. Mude apenas se o mirror padrão estiver lento ou inacessível na sua região."; }
+
 	function GENTOO_MIRROR_tag()  { echo "Mirror de download do Gentoo"; }
-	function GENTOO_MIRROR_help() { echo "URL do mirror para baixar o stage3 e os pacotes. Selecione um próximo de você para maior velocidade."; }
-	function GENTOO_ARCH_tag()    { echo "Arquitetura do sistema"; }
-	function GENTOO_SUBARCH_tag() { echo "Sub-arquitetura"; }
+	function GENTOO_MIRROR_help() { echo "URL do servidor de onde o stage3 e os pacotes binários serão baixados. Selecione o mais próximo de você para maior velocidade. O mirror detectado automaticamente já é o ideal para sua região."; }
+
+	function GENTOO_ARCH_tag()    { echo "Arquitetura alvo"; }
+	function GENTOO_ARCH_help()    { echo "Tag de arquitetura do Gentoo para o novo sistema. Para a maioria dos PCs modernos: amd64 (64-bit). Não altere a menos que esteja instalando em ARM ou x86 32-bit."; }
+
+	function GENTOO_SUBARCH_tag() { echo "Sub-arquitetura (subarch)"; }
+	function GENTOO_SUBARCH_help() { echo "Sub-arquitetura do Gentoo para o novo sistema. Deixe vazio para usar o padrão genérico. Usado principalmente para arquiteturas especiais (ARM, MIPS, RISC-V)."; }
+
 	function USE_PORTAGE_TESTING_tag()  { echo "Aceitar pacotes de teste (~amd64)"; }
-	function USE_PORTAGE_TESTING_help() { echo "Permite instalar versões mais recentes (testing) dos pacotes. Recomendado para hardware moderno."; }
-	function SELECT_MIRRORS_tag()           { echo "Selecionar mirrors automaticamente"; }
-	function SELECT_MIRRORS_help()          { echo "Usar mirrorselect para encontrar os mirrors mais rápidos automaticamente."; }
-	function SELECT_MIRRORS_LARGE_FILE_tag() { echo "Teste com arquivo grande"; }
+	function USE_PORTAGE_TESTING_help() { echo "Permite instalar pacotes marcados como 'testing' (~amd64). Dá acesso a versões mais recentes de software. Recomendado para hardware moderno e para o Hyprland, que evolui rapidamente."; }
+
+	function SELECT_MIRRORS_tag()           { echo "Selecionar mirrors automaticamente (mirrorselect)"; }
+	function SELECT_MIRRORS_help()          { echo "Usa a ferramenta 'mirrorselect' para fazer benchmark e encontrar os mirrors de download mais rápidos para sua localização. Pode demorar 1-2 minutos mas melhora significativamente a velocidade de download."; }
+
+	function SELECT_MIRRORS_LARGE_FILE_tag() { echo "Testar mirrors com arquivo grande (~10MB)"; }
+	function SELECT_MIRRORS_LARGE_FILE_help() { echo "Faz o benchmark dos mirrors usando um arquivo de ~10MB em vez de pequenos pacotes. Dá um resultado mais preciso da velocidade real de download, mas demora um pouco mais."; }
 
 	# --- Opcoes finais ---
-	function ENABLE_SSHD_tag()  { echo "Instalar e ativar SSH"; }
-	function ENABLE_SSHD_help() { echo "Instala o servidor SSH com configuracao segura (apenas chaves ed25519, sem senha)."; }
+	function ENABLE_SSHD_tag()  { echo "Instalar e ativar servidor SSH"; }
+	function ENABLE_SSHD_help() { echo "Instala e ativa o servidor SSH com configuração segura:\n  - Apenas autenticação por chave (sem senha)\n  - Somente chaves ed25519\n  - Root pode logar (necessário para configuração inicial)\nRecomendado para acesso remoto após a instalação."; }
+
 	function ENABLE_BINPKG_tag()  { echo "Usar pacotes pre-compilados (binpkg)"; }
-	function ENABLE_BINPKG_help() { echo "Quando disponivel, baixa pacotes ja compilados em vez de compilar do zero. Acelera muito a instalacao."; }
-	function KERNEL_TYPE_tag()  { echo "Tipo de kernel"; }
-	function KERNEL_TYPE_help() { echo "'bin' instala o kernel pre-compilado (rapido). 'source' compila o kernel localmente (mais lento, mas otimizado)."; }
-	function ROOT_SSH_AUTHORIZED_KEYS_tag()  { echo "Chaves SSH autorizadas para root"; }
-	function ROOT_SSH_AUTHORIZED_KEYS_help() { echo "Cole aqui as chaves publicas SSH que terao acesso root apos a instalacao."; }
-	function ADDITIONAL_PACKAGES_tag()  { echo "Pacotes adicionais"; }
-	function ADDITIONAL_PACKAGES_help() { echo "Pacotes extras a instalar no final. Ja pre-preenchido pelo perfil selecionado. Mantenha ao minimo."; }
+	function ENABLE_BINPKG_help() { echo "Quando disponível, baixa pacotes já compilados dos servidores oficiais do Gentoo em vez de compilar do zero. Reduz drasticamente o tempo de instalação. Se não houver binário disponível, compila normalmente."; }
+
+	function KERNEL_TYPE_tag()  { echo "Tipo de kernel Linux"; }
+	function KERNEL_TYPE_help() { echo "Define qual pacote de kernel será instalado:\n  bin    → gentoo-kernel-bin: kernel pré-compilado. Rápido (~2 min), funciona na maioria dos hardwares. Recomendado para primeiro boot.\n  source → gentoo-kernel: compila o kernel localmente (~20-40 min). Mesma config do binário, mas otimizado para seu hardware."; }
+
+	function ROOT_SSH_AUTHORIZED_KEYS_tag()  { echo "Chaves SSH autorizadas para o root"; }
+	function ROOT_SSH_AUTHORIZED_KEYS_help() { echo "Cole aqui as chaves públicas SSH (conteúdo do arquivo ~/.ssh/id_ed25519.pub) que terão acesso root ao sistema após a instalação. Uma por linha. Necessário se ENABLE_SSHD estiver ativado."; }
+
+	function ADDITIONAL_PACKAGES_tag()  { echo "Pacotes adicionais a instalar"; }
+	function ADDITIONAL_PACKAGES_help() { echo "Lista de pacotes extras a instalar no final da instalação via emerge. Já pré-preenchido pelo perfil selecionado (JaKooLit, Minimal ou Personalizado). Mantenha ao mínimo — pacotes complexos podem gerar conflitos de USE flags."; }
 }
+
 
 
 ################################################
