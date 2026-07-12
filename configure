@@ -348,7 +348,80 @@ Use Space to select, Enter to confirm."
 	esac
 }
 
+function sovereign_select_zram() {
+	if [[ "$SOVEREIGN_LANG" == "pt" ]]; then
+		local title="Sovereign Edition — zRAM (Swap em RAM)"
+		local desc="zRAM cria um swap comprimido dentro da propria RAM.
+E muito mais rapido que swap em disco (10GB/s vs 500MB/s).
+Funciona junto com o swap em disco — um complementa o outro.
+
+Algoritmo: zstd (melhor compressao, menor latencia)
+Use Espaco para selecionar, Enter para confirmar."
+		local lbl_half="50% da RAM como zram  <- RECOMENDADO"
+		local lbl_half_desc="Com 16GB RAM = 8GB zram (~20-24GB virtuais)"
+		local lbl_quarter="25% da RAM como zram  (conservador)"
+		local lbl_quarter_desc="Com 16GB RAM = 4GB zram (~18-20GB virtuais)"
+		local lbl_none="Sem zram"
+		local lbl_none_desc="Usa apenas o swap em disco"
+		local ok_label="Confirmar"
+	else
+		local title="Sovereign Edition — zRAM (RAM-based Swap)"
+		local desc="zRAM creates a compressed swap device inside your own RAM.
+Much faster than disk swap (10GB/s vs 500MB/s).
+Works alongside disk swap — they complement each other.
+
+Algorithm: zstd (best compression, lowest latency)
+Use Space to select, Enter to confirm."
+		local lbl_half="50% of RAM as zram  <- RECOMMENDED"
+		local lbl_half_desc="With 16GB RAM = 8GB zram (~20-24GB virtual)"
+		local lbl_quarter="25% of RAM as zram  (conservative)"
+		local lbl_quarter_desc="With 16GB RAM = 4GB zram (~18-20GB virtual)"
+		local lbl_none="No zram"
+		local lbl_none_desc="Use disk swap only"
+		local ok_label="Confirm"
+	fi
+
+	local result
+	result=$(command dialog --colors \
+		--title "\Zb${title}\ZB" \
+		--ok-label "$ok_label" \
+		--cancel-label "Skip" \
+		--radiolist "$desc" \
+		18 72 3 \
+		"half"    "$lbl_half — $lbl_half_desc"       "on" \
+		"quarter" "$lbl_quarter — $lbl_quarter_desc" "off" \
+		"none"    "$lbl_none — $lbl_none_desc"       "off" \
+		3>&1 1>&2 2>&3) || result="half"
+
+	case "${result:-half}" in
+		"half")
+			SOVEREIGN_ZRAM=true
+			SOVEREIGN_ZRAM_SIZE="ram / 2"
+			# Adiciona zram-generator aos pacotes se ainda nao estiver
+			local has_zram=false
+			for pkg in "${ADDITIONAL_PACKAGES[@]}"; do
+				[[ "$pkg" == "sys-apps/zram-generator" ]] && has_zram=true
+			done
+			[[ "$has_zram" == false ]] && ADDITIONAL_PACKAGES+=("sys-apps/zram-generator")
+			;;
+		"quarter")
+			SOVEREIGN_ZRAM=true
+			SOVEREIGN_ZRAM_SIZE="ram / 4"
+			local has_zram=false
+			for pkg in "${ADDITIONAL_PACKAGES[@]}"; do
+				[[ "$pkg" == "sys-apps/zram-generator" ]] && has_zram=true
+			done
+			[[ "$has_zram" == false ]] && ADDITIONAL_PACKAGES+=("sys-apps/zram-generator")
+			;;
+		"none")
+			SOVEREIGN_ZRAM=false
+			SOVEREIGN_ZRAM_SIZE=""
+			;;
+	esac
+}
+
 function sovereign_apply_translations() {
+
 	# Redefine APENAS as strings visíveis (tag/label/help) do menu TUI original.
 	# NÃO toca em nenhuma lógica, variável ou estrutura do projeto original.
 	[[ "$SOVEREIGN_LANG" != "pt" ]] && return 0
@@ -885,6 +958,11 @@ function load_default_config() {
 
 	# Mirror detectado/selecionado automaticamente
 	GENTOO_MIRROR="${DETECTED_GENTOO_MIRROR:-https://mirror.leaseweb.com/gentoo/}"
+
+	# zram — swap comprimido em RAM (configurado pelo sovereign_select_zram)
+	SOVEREIGN_ZRAM=false
+	SOVEREIGN_ZRAM_SIZE="ram / 2"
+
 	UNSAVED_CHANGES=true
 }
 
@@ -908,6 +986,8 @@ else
 	sovereign_select_mirror
 	# 5. Perfil: Minimal / JaKooLit / Personalizado
 	sovereign_select_profile
+	# 6. zRAM — swap comprimido em RAM
+	sovereign_select_zram
 fi
 
 # 6. Aplica traducoes PT (redefine strings do menu TUI se SOVEREIGN_LANG=pt)

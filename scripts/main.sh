@@ -544,6 +544,38 @@ EOF
 		try emerge --verbose --autounmask-continue=y -- "${ADDITIONAL_PACKAGES[@]}"
 	fi
 
+	# --- Sovereign Edition: configurar zRAM se solicitado ---
+	if [[ "${SOVEREIGN_ZRAM:-false}" == "true" && -n "${SOVEREIGN_ZRAM_SIZE:-}" ]]; then
+		einfo "Configurando zRAM (swap comprimido em RAM)"
+		mkdir -p /etc/systemd
+		cat > /etc/systemd/zram-generator.conf <<EOF
+# Gerado automaticamente pela Sovereign Edition
+# zRAM — swap comprimido dentro da propria RAM
+# Algoritmo zstd: melhor relacao compressao/latencia
+[zram0]
+zram-size = ${SOVEREIGN_ZRAM_SIZE}
+compression-algorithm = zstd
+EOF
+		einfo "zram-generator.conf criado: zram-size = ${SOVEREIGN_ZRAM_SIZE} | algoritmo = zstd"
+
+		# Prioridade do zram sobre o swap em disco (menor valor = maior prioridade)
+		# zram recebe prioridade 100, swap em disco fica em prioridade padrao (0)
+		mkdir -p /etc/sysctl.d
+		cat > /etc/sysctl.d/99-zram-swappiness.conf <<EOF
+# Sovereign Edition — zRAM tuning
+# vm.swappiness=180: favorece o zram agressivamente antes do swap em disco
+# Intervalo: 0-200. >100 permite swap proativo de paginas ativas.
+vm.swappiness = 180
+# vm.watermark_boost_factor: reduz pressao de memoria em rajadas
+vm.watermark_boost_factor = 0
+# vm.watermark_scale_factor: escala dos watermarks de memoria
+vm.watermark_scale_factor = 125
+# vm.page-cluster: envia 1 pagina por vez pro zram (otimizado para swap comprimido)
+vm.page-cluster = 0
+EOF
+		einfo "Tuning de kernel para zRAM aplicado em /etc/sysctl.d/99-zram-swappiness.conf"
+	fi
+
 	if ask "Do you want to assign a root password now?"; then
 		try passwd root
 		einfo "Root password assigned"
