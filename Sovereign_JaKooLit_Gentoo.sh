@@ -74,7 +74,7 @@ print_step "Resolvendo dependencias e Dispatch-conf..."
 # Aplica automaticamente mudancas nos arquivos de configuracao gerados pelo autounmask
 echo "-5" | dispatch-conf || true
 
-# 4. INSTALACAO DO CORE (Hyprland, Waybar, Rofi, Kitty)
+# 4. INSTALACAO DO CORE (Hyprland, Waybar, Rofi, Kitty, Network)
 print_step "Compilando o Nucleo do Hyprland e Ferramentas Visuais..."
 emerge --autounmask-continue --autounmask-write --update --newuse \
     gui-wm/hyprland \
@@ -90,7 +90,12 @@ emerge --autounmask-continue --autounmask-write --update --newuse \
     media-sound/pavucontrol \
     app-misc/jq \
     sys-auth/polkit-kde-agent \
-    sys-process/btop
+    sys-process/btop \
+    net-misc/networkmanager \
+    gnome-extra/nm-applet
+
+# Habilitando o serviço do NetworkManager (e desabilitando o basico se necessario)
+systemctl enable NetworkManager || true
 
 # Aplica eventuais autounmask que rolaram acima
 echo "-5" | dispatch-conf || true
