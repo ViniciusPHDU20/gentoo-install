@@ -311,21 +311,9 @@ Use Space to select, Enter to confirm."
 			ADDITIONAL_PACKAGES=()
 			;;
 		"jakoolit")
-			# Pacotes base do ambiente Hyprland/JaKooLit no Gentoo
-			ADDITIONAL_PACKAGES=(
-				"gui-wm/hyprland"
-				"gui-apps/waybar"
-				"gui-apps/wofi"
-				"gui-apps/swaylock"
-				"gui-apps/grim"
-				"gui-apps/slurp"
-				"gui-apps/wl-clipboard"
-				"gui-apps/mako"
-				"x11-terms/kitty"
-				"x11-misc/xdg-user-dirs"
-				"media-fonts/noto"
-				"gui-apps/swww"
-			)
+			# Delega a instalacao 100% para o script Sovereign_JaKooLit_Gentoo.sh
+			# que sera chamado automaticamente pelo main.sh no final da instalacao base.
+			ADDITIONAL_PACKAGES=()
 			# JaKooLit exige systemd — forca caso ainda esteja em openrc
 			[[ "$STAGE3_VARIANT" == *openrc* ]] && STAGE3_VARIANT="systemd"
 			;;

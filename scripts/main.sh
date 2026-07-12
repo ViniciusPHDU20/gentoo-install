@@ -629,6 +629,18 @@ EOF
 			|| die "Could not modify /etc/portage/make.conf"
 	fi
 
+	# --- Sovereign Edition: Pós-Instalação Automática ---
+	if [[ "${SOVEREIGN_PROFILE:-}" == "jakoolit" ]]; then
+		einfo "Perfil JaKooLit detectado. Iniciando pós-instalação automática (Hyprland + Dotfiles)..."
+		if [[ -x "$GENTOO_INSTALL_REPO_BIND/Sovereign_JaKooLit_Gentoo.sh" ]]; then
+			try bash "$GENTOO_INSTALL_REPO_BIND/Sovereign_JaKooLit_Gentoo.sh"
+			einfo "Pós-instalação JaKooLit concluída com sucesso!"
+		else
+			ewarn "Script Sovereign_JaKooLit_Gentoo.sh não encontrado ou sem permissão de execução."
+			ewarn "Você terá que executá-lo manualmente depois."
+		fi
+	fi
+
 	maybe_exec 'after_install'
 
 	einfo "Gentoo installation complete."
