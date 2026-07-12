@@ -1,48 +1,46 @@
 # gentoo-install — Sovereign Edition
 
 > **Fork de [oddlama/gentoo-install](https://github.com/oddlama/gentoo-install)**  
-> Mantido por [ViniciusPHDU20](https://github.com/ViniciusPHDU20)
+> Refatorado e blindado por [ViniciusPHDU20](https://github.com/ViniciusPHDU20)
 
-Este fork estende o instalador original com suporte a **F2FS**, detecção automática de **NVMe** e uma arquitetura em dois estágios que separa a instalação base do ambiente de desktop.
+A **Sovereign Edition** transforma a experiência bruta de instalação do Gentoo Linux. Ao invés de lutar contra o `make.conf` e horas de configurações manuais, este instalador analisa seu hardware, define as otimizações perfeitas e oferece uma interface gráfica (TUI) 100% traduzida para o Português para você "forjar o seu próprio sistema limpo".
 
----
-
-## O que há de novo neste fork
-
-| Recurso | Original | Sovereign Edition |
-|---------|----------|------------------|
-| Sistemas de arquivo suportados | ext4, btrfs, ZFS | ext4, btrfs, ZFS, **F2FS** ✨ |
-| Detecção automática de NVMe | ❌ | ✅ Sugere F2FS automaticamente |
-| Pós-instalação (Hyprland + JaKooLit) | ❌ | ✅ Script separado (veja abaixo) |
-| Instalação base | Source-based | Source-based (+ binpkg opcional) |
+Além da base sólida, ele inclui um script de pós-instalação cirúrgico para implantar o **Hyprland** usando os *dotfiles* premium do **JaKooLit**.
 
 ---
 
-## Arquitetura do projeto
+## ✨ Features Exclusivas da Sovereign Edition
 
+| Recurso | Descrição Técnica |
+|---------|-------------------|
+| **Auto-Detecção de Hardware** | O motor `hardware_detect.sh` lê seu processador, memória e GPU para definir automaticamente `CFLAGS` (`-march=native`), `MAKEOPTS` e `VIDEO_CARDS`. Tudo é injetado no `make.conf` antes do primeiro pacote ser compilado. |
+| **Interface 100% Traduzida** | Todos os 30 menus da TUI de configuração possuem descrições detalhadas em **Português**, explicando de forma didática o que é F2FS, LUKS, ZFS, UEFI, e Swap. |
+| **zRAM Nativo (Swap em RAM)** | Integração transparente com `zram-generator`. Protege contra travamentos (OOM) em compilações pesadas criando um swap ultrarrápido comprimido via `zstd`, com *tuning* de kernel agressivo via `sysctl`. |
+| **Sovereign Profiles** | Escolha entre o perfil **Minimal** (apenas a base do sistema) ou **JaKooLit** (força o Systemd e prepara as dependências Wayland/Core). |
+| **F2FS para NVMe** | Suporte nativo ao F2FS. Se detectado um SSD NVMe, o instalador sugere este sistema de arquivos projetado especificamente para memória flash. |
+| **Pós-Instalação Automática** | Script `Sovereign_JaKooLit_Gentoo.sh` pronto para uso que converte a base instalada em um ambiente Hyprland deslumbrante e otimizado. |
+
+---
+
+## 🏗️ Arquitetura do Projeto
+
+```text
+gentoo-install/                 ← Este repositório
+├─ configure                    ← Motor TUI principal (gera o gentoo.conf)
+├─ install                      ← Instalador base do Gentoo (lê o gentoo.conf)
+├─ hardware_detect.sh           ← Módulo de injeção de flags e scan de hardware
+├─ gentoo.conf.example          ← Template referencial de configuração
+├─ scripts/                     ← Utilitários internos de chroot e compilação
+└─ Sovereign_JaKooLit_Gentoo.sh ← Pós-instalação (Hyprland + Dotfiles)
 ```
-gentoo-install/          ← Este repositório
-├─ configure             ← TUI de configuração (menuconfig-style)
-├─ install               ← Instalador base Gentoo
-├─ gentoo.conf.example   ← Exemplo comentado de configuração
-└─ scripts/              ← Utilitários internos
-
-Sovereign_JaKooLit_Gentoo.sh  ← Pós-instalação SEPARADO
-                               (Hyprland + dotfiles JaKooLit)
-                               Executado APÓS a base ser validada
-```
-
-### Por que a separação?
-
-O instalador base instala um sistema **Gentoo mínimo** funcional — particionamento, portage, kernel, rede. O script de pós-instalação (`Sovereign_JaKooLit_Gentoo.sh`) é independente e voltado especificamente para quem deseja o ambiente **Hyprland com dotfiles do JaKooLit**. Ele só deve ser executado após a instalação base ser **confirmada sem erros**.
 
 ---
 
-## Uso rápido
+## 🚀 Como Usar
 
-### 1. Boot em um live environment
+### 1. Boot em um Live Environment
 
-Recomendado: [Arch Linux ISO](https://www.archlinux.org/download/) (o instalador consegue baixar dependências automaticamente).
+Recomenda-se o **Arch Linux ISO** por já conter ferramentas modernas e conexão fácil via `iwctl`.
 
 ```bash
 pacman -Sy git
@@ -50,206 +48,76 @@ git clone https://github.com/ViniciusPHDU20/gentoo-install
 cd gentoo-install
 ```
 
-### 2. Configurar
+### 2. Configuração (Sovereign TUI)
 
 ```bash
-./configure     # Abre o menu TUI — configure e salve como gentoo.conf
+./configure
 ```
+- Escolha **Português**.
+- Veja o **Resumo do Hardware** (o sistema detectará sua GPU e CPU).
+- No menu de perfis, escolha **JaKooLit** (ou Minimal).
+- Configure seu ZRAM (Recomendado 50%).
+- Passe pelos menus (partição, locale, rede) e salve ao final. O arquivo gerado será o `gentoo.conf`.
 
-> **💡 Dica NVMe:** Se o seu disco raiz for NVMe (ex: `/dev/nvme0n1`), selecione `root_fs=f2fs` no menu de particionamento. F2FS foi projetado especificamente para flash storage e oferece melhor desempenho e vida útil em SSDs NVMe.
+### 3. Instalação da Base
 
-**Exemplo de configuração rápida para NVMe com F2FS:**
 ```bash
-# Em gentoo.conf (ou gerado pelo ./configure):
-function disk_configuration() {
-    create_classic_single_disk_layout swap=8GiB type="efi" luks=false root_fs=f2fs /dev/nvme0n1
-}
+./install
 ```
+O script fará o particionamento, download do `stage3`, aplicará as flags no `make.conf` e compilará o núcleo do Gentoo (incluindo o Kernel). Não requer supervisão.
 
-**Exemplo com ext4 (HDs convencionais):**
-```bash
-function disk_configuration() {
-    create_classic_single_disk_layout swap=8GiB type="efi" luks=true root_fs=ext4 /dev/sda
-}
-```
+Ao finalizar, você verá a mensagem de sucesso. **Dê reboot e logue como root no seu novo Gentoo.**
 
-### 3. Instalar a base
+### 4. Pós-Instalação: O Ambiente Hyprland
+
+Com o sistema base bootado, garantido e conectado à internet, entre na pasta do repositório novamente (agora dentro do seu Gentoo instalado) e execute:
 
 ```bash
-./install       # Inicia a instalação — não necessita supervisão após o particionamento
-```
-
-A instalação realiza (em ordem):
-
-1. Particionamento do disco
-2. Download e verificação criptográfica do stage3
-3. *(dentro do chroot)*
-4. Configuração do Portage (rsync/git sync, mirrors)
-5. Configuração base (hostname, timezone, keymap, locales)
-6. Instalação de pacotes essenciais (git, kernel…)
-7. Sistema bootável (fstab, initramfs, entrada EFI via efibootmgr)
-8. Sistema mínimo funcional (rede cabeada, eix, senha root)
-   - *(Opcional)* sshd com configuração segura
-   - *(Opcional)* pacotes adicionais do `gentoo.conf`
-
-### 4. *(Opcional)* Pós-instalação — Hyprland + JaKooLit
-
-> ⚠️ **Este passo só deve ser executado após a instalação base ser concluída e validada sem erros.**
-
-O script de pós-instalação é mantido em repositório separado e instala:
-- **Hyprland** (Wayland compositor)
-- **Dotfiles do JaKooLit** (Waybar, Rofi, themes, etc.)
-- Pacotes complementares do ambiente desktop
-
-```bash
-# Após reboot no sistema Gentoo instalado:
+cd gentoo-install
 bash Sovereign_JaKooLit_Gentoo.sh
 ```
 
----
-
-## Sistemas de arquivo disponíveis
-
-| FS | Melhor para | Notas |
-|----|-------------|-------|
-| `ext4` | HDs, SSDs SATA | Estável, amplamente suportado |
-| `btrfs` | SSDs, snapshots | Compressão transparente, subvolumes |
-| `f2fs` | **NVMe, SSDs** ✨ | Otimizado para flash, melhor performance |
-| `ZFS` | Servidores, múltiplos discos | Snapshots, RAID, compressão |
-
-### F2FS em NVMe — por que usar?
-
-F2FS (Flash-Friendly File System) foi desenvolvido pela Samsung especificamente para storage flash. Em NVMe, oferece:
-
-- **Menor write amplification** → maior vida útil do SSD
-- **Melhor throughput sequencial** em operações de I/O
-- **Latência reduzida** em workloads mistos (compilação, gaming)
-- Suporte nativo no kernel Linux desde 3.8
-
-**Pré-requisito:** certifique-se de que `sys-fs/f2fs-tools` está disponível no live environment:
-```bash
-# Arch Linux live:
-pacman -S f2fs-tools
-
-# Gentoo (dentro do chroot):
-emerge -av sys-fs/f2fs-tools
-```
+**O que o script faz:**
+1. Ativa os repositórios `guru` e `wayland-desktop`.
+2. Habilita pacotes de testes (`~amd64`) cirurgicamente apenas para os componentes visuais.
+3. Compila o Waybar, Hyprland, Rofi, SWWW, Kitty, entre outros.
+4. Habilita o Flatpak e baixa os softwares fechados (Steam, Discord, Wine).
+5. Clona o repositório oficial do JaKooLit, injeta patchs de correção e aplica na sua `~/.config`.
 
 ---
 
-## Kernel: source ou binário?
+## 🧠 Detalhes Técnicos Adicionais
 
-O instalador suporta dois modos (configurável via `KERNEL_TYPE`):
+### F2FS em NVMe
+Seu SSD NVMe sofre menos desgaste (*write amplification*) e entrega maior *throughput* com F2FS do que com ext4/btrfs.
+*Nota:* Garanta que o pacote `f2fs-tools` esteja instalado no Live USB antes de iniciar (`pacman -S f2fs-tools`).
 
-| Modo | Variável | Descrição |
-|------|----------|-----------|
-| **Binário** | `KERNEL_TYPE=bin` | Usa `gentoo-kernel-bin` — rápido, funciona em todo hardware comum |
-| **Source** | `KERNEL_TYPE=source` | Compila `gentoo-kernel` — mesmo config do binário, mas local |
-
-> **Recomendação:** comece com `bin` para validar a instalação. Compile um kernel customizado depois do primeiro boot para otimizar para seu hardware específico.
-
-Para atualizar o kernel após a instalação:
-
-```bash
-# 1. Emerge novo kernel
-emerge -av sys-kernel/gentoo-kernel-bin
-
-# 2. Selecionar versão
-eselect kernel set <kver>
-
-# 3. Backup
-mv "$kernel"{,.bak}; mv "$initrd"{,.bak}
-
-# 4. Novo initramfs
-generate_initramfs.sh <kver> "$initrd"
-
-# 5. Copiar kernel
-cp /boot/kernel-<kver> "$kernel"    # systemd
-# ou
-cp /boot/vmlinuz-<kver> "$kernel"  # openrc
-```
+### ZRAM vs Swap em Disco
+A Sovereign Edition não substitui o swap em disco, ela o **complementa**.
+O `swappiness` é configurado para `180`, o que significa que o kernel tentará ao máximo manter os arquivos inativos compactados na RAM via ZRAM (velocidades de ~10GB/s). Só quando a RAM física acabar é que ele paginará para o SSD/HD.
 
 ---
 
-## Configuração avançada
+## 🆘 Troubleshooting
 
-Todas as opções estão documentadas em [`gentoo.conf.example`](gentoo.conf.example) e nos menus de ajuda do TUI.
-
-### Otimizações pós-instalação recomendadas
-
+### `cc1plus: out of memory` (Compilação Morta)
+Se a compilação do Firefox ou do Node.js parar abruptamente com este erro, sua máquina ficou sem memória (inclusive o ZRAM esgotou).
+**Solução:** Crie um swapfile de disco gigantesco temporariamente:
 ```bash
-# 1. Ler notícias do Portage
-eselect news read
-
-# 2. Otimizar CFLAGS para o seu CPU
-emerge -av app-misc/resolve-march-native
-resolve-march-native | tee -a /etc/portage/make.conf
-
-# 3. Detectar flags de CPU
-emerge -av app-portage/cpuid2cpuflags
-cpuid2cpuflags >> /etc/portage/make.conf
-
-# 4. Umask seguro
-echo 'umask 077' >> /etc/profile
-```
-
-### SSH (opcional)
-
-O instalador pode configurar um sshd com segurança elevada:
-- Apenas chaves **ed25519**
-- Algoritmos de troca de chave restritos
-- **Sem autenticação por senha**
-- Apenas root pode logar
-
-Forneça sua chave pública em `ROOT_SSH_AUTHORIZED_KEYS` no `gentoo.conf`.
-
----
-
-## Troubleshooting
-
-### OOM durante compilação (cc1plus killed)
-
-Se a compilação parar com `Out of memory: Killed process ... (cc1plus)`, o sistema ficou sem RAM durante a compilação paralela (comum com `-j16` ou mais em pacotes grandes como Node.js ou Firefox).
-
-**Solução:** criar um swapfile de emergência:
-```bash
-fallocate -l 12G /swapfile
+fallocate -l 16G /swapfile
 chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
-```
-
-Retome a compilação — o Portage continuará de onde parou:
-```bash
 emerge --resume
-```
-
-### blkid não encontra UUID após particionamento
-
-Certifique-se de que todos os dispositivos estão desmontados antes de iniciar:
-```bash
-wipefs -a <DEVICE>
-```
-
-### ZFS requer kernel mais novo
-
-```bash
-# No shell de emergência dentro do chroot (pressione S<Enter>):
-echo 'ACCEPT_KEYWORDS="~amd64"' >> /etc/portage/make.conf
-emerge -v gentoo-kernel-bin
-exit
-# Selecione 'retry'
 ```
 
 ---
 
-## Referências
+## 📚 Referências
 
 - [Gentoo AMD64 Handbook](https://wiki.gentoo.org/wiki/Handbook:AMD64)
-- [Sakaki's EFI Install Guide](https://wiki.gentoo.org/wiki/Sakaki%27s_EFI_Install_Guide)
-- [F2FS — Gentoo Wiki](https://wiki.gentoo.org/wiki/F2FS)
-- [JaKooLit Hyprland dotfiles](https://github.com/JaKooLit/Arch-Hyprland)
-- [Projeto upstream — oddlama/gentoo-install](https://github.com/oddlama/gentoo-install)
+- [JaKooLit Hyprland Dotfiles](https://github.com/JaKooLit/Arch-Hyprland)
+- [Projeto upstream (Base) — oddlama/gentoo-install](https://github.com/oddlama/gentoo-install)
 
 ---
 
