@@ -111,14 +111,24 @@ echo -e "\n${YELLOW}[2/4] Detectando RAM...${NC}"
 RAM_MB=$(grep MemTotal /proc/meminfo | awk '{print int($2/1024)}')
 echo -e "  RAM total: ${GREEN}${RAM_MB} MB${NC}"
 
-# Regra: 1 job por 1.5GB de RAM, nunca mais que núcleos disponíveis
-JOBS_BY_RAM=$(( RAM_MB / 1500 ))
+# Regra: 1 job por 2GB de RAM (margem segura para Firefox/LLVM/Node.js)
+# Pacotes pesados como Firefox, LLVM e Node.js consomem até 2-3GB por thread.
+# Usar 2GB como base evita OOM mesmo nos piores casos.
+JOBS_BY_RAM=$(( RAM_MB / 2000 ))
 [[ $JOBS_BY_RAM -lt 1 ]] && JOBS_BY_RAM=1
 
+# Nunca ultrapassar o número de núcleos físicos
 JOBS=$(( CPU_CORES < JOBS_BY_RAM ? CPU_CORES : JOBS_BY_RAM ))
+
+# load-average = 90% dos cores (mantém o sistema responsivo durante compilação)
 LOAD_AVG=$(echo "scale=1; $CPU_CORES * 0.9" | bc)
 
-echo -e "  Jobs calculados: ${GREEN}${JOBS} (CPU cores: ${CPU_CORES}, RAM: ${RAM_MB}MB)${NC}"
+# Aviso se RAM for menor que 8GB (compilação pode ser lenta/instável)
+if [[ $RAM_MB -lt 8000 ]]; then
+    echo -e "  ${RED}⚠ Menos de 8GB de RAM detectados. Recomendado criar swapfile de pelo menos 8GB antes de compilar pacotes grandes (Firefox, LLVM, Node.js).${NC}"
+fi
+
+echo -e "  Jobs calculados: ${GREEN}${JOBS}${NC} (fórmula: ${RAM_MB}MB ÷ 2000 = ${JOBS_BY_RAM}, limitado a ${CPU_CORES} cores)"
 echo -e "  load-average: ${GREEN}${LOAD_AVG}${NC}"
 
 # =============================================================================
