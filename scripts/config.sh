@@ -25,6 +25,7 @@ USED_LUKS=false
 USED_ZFS=false
 # Flag to track usage of btrfs
 USED_BTRFS=false
+USED_F2FS=false
 # Flag to track usage of encryption
 USED_ENCRYPTION=false
 # Flag to track whether partitioning or formatting is forbidden
@@ -240,11 +241,14 @@ function format() {
 	declare -A arguments; parse_arguments "$@"
 
 	verify_existing_id id
-	verify_option type bios efi swap ext4 btrfs
+	verify_option type bios efi swap ext4 btrfs f2fs
 
 	local type="${arguments[type]}"
 	if [[ "$type" == "btrfs" ]]; then
 		USED_BTRFS=true
+	fi
+	if [[ "$type" == "f2fs" ]]; then
+		USED_F2FS=true
 	fi
 
 	DISK_ACTIONS+=("action=format" "$@" ";")

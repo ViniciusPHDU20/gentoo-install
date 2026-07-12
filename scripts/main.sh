@@ -181,6 +181,8 @@ function generate_initramfs() {
 		&& modules+=("crypt crypt-gpg")
 	[[ $USED_BTRFS == "true" ]] \
 		&& modules+=("btrfs")
+	[[ $USED_F2FS == "true" ]] \
+		&& modules+=("f2fs")
 	[[ $USED_ZFS == "true" ]] \
 		&& modules+=("zfs")
 
@@ -507,6 +509,12 @@ EOF
 	if [[ $USED_BTRFS == "true" ]]; then
 		einfo "Installing btrfs-progs"
 		try emerge --verbose sys-fs/btrfs-progs
+	fi
+
+	# Install f2fs-tools if we used F2FS
+	if [[ $USED_F2FS == "true" ]]; then
+		einfo "Installing f2fs-tools"
+		try emerge --verbose sys-fs/f2fs-tools
 	fi
 
 	try emerge --verbose dev-vcs/git
