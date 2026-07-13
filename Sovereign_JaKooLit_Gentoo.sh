@@ -141,7 +141,7 @@ flatpak install -y flathub org.winehq.Wine || true
 
 # 6. DOWNLOAD E APLICACAO DOS DOTFILES
 print_step "Baixando e instalando os Dotfiles do JaKooLit..."
-TARGET_USER=$(grep -E ":1000:" /etc/passwd | cut -d: -f1)
+TARGET_USER=$(grep -E ":1000:" /etc/passwd | cut -d: -f1 || true)
 if [ -z "$TARGET_USER" ]; then
     TARGET_USER="root"
     USER_HOME="/root"
