@@ -66,6 +66,7 @@ app-emulation/wine-staging vulkan dxvk
 media-libs/libcanberra alsa
 dev-qt/qtbase opengl wayland eglfs icu libproxy
 dev-qt/qttools opengl
+dev-qt/qtdeclarative opengl
 kde-frameworks/kwindowsystem X
 dev-qt/qt5compat qml icu
 kde-frameworks/kconfig qml dbus
