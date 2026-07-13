@@ -100,6 +100,7 @@ print_step "Compilando o Nucleo do Hyprland e Ferramentas Visuais..."
 rm -f /etc/portage/package.use/zz-autounmask* || true
 
 # Patch: Atualiza assinatura do awww que esta quebrado no repositorio GURU
+rm -f /var/db/repos/guru/gui-apps/awww/Manifest || true
 for ebuild_file in /var/db/repos/guru/gui-apps/awww/*.ebuild; do
     ebuild "$ebuild_file" manifest || true
 done
