@@ -50,7 +50,7 @@ cat << 'EOF_USE' > /etc/portage/package.accept_keywords/jakoolit-hyprland
 */*::wayland-desktop ~amd64
 gui-wm/hyprland ~amd64
 gui-apps/waybar ~amd64
-gui-apps/swww ~amd64
+gui-apps/awww ~amd64
 gui-apps/swaync ~amd64
 EOF_USE
 
@@ -81,7 +81,7 @@ emerge --autounmask-continue --autounmask-write --update --newuse \
     gui-apps/waybar \
     gui-apps/rofi-wayland \
     x11-terms/kitty \
-    gui-apps/swww \
+    gui-apps/awww \
     gui-apps/swaync \
     media-sound/pamixer \
     gui-apps/wl-clipboard \
@@ -145,6 +145,10 @@ chown -R "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config"
 # --- Patch Sovereign ---
 # Corrige o Rofi quebrando com wallpaper com espaco
 sed -i 's/pkill rofi/pkill rofi; sleep 0.2/g' "$USER_HOME/.config/hypr/UserScripts/WallpaperSelect.sh" 2>/dev/null || true
+
+# Cria symlink do awww para swww para manter compatibilidade com os scripts do JaKooLit
+ln -sf /usr/bin/awww /usr/bin/swww || true
+ln -sf /usr/bin/awww-daemon /usr/bin/swww-daemon || true
 
 print_step "Instalacao Concluida com Sucesso!"
 echo -e "${GREEN}O ecossistema JaKooLit Gentoo esta pronto.${NC}"
