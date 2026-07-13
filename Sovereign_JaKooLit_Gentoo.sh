@@ -98,6 +98,11 @@ echo "-5" | dispatch-conf || true
 # 4. INSTALACAO DO CORE (Hyprland, Waybar, Rofi, Kitty, Network, Audio)
 print_step "Compilando o Nucleo do Hyprland e Ferramentas Visuais..."
 rm -f /etc/portage/package.use/zz-autounmask* || true
+
+# Patch: Atualiza assinatura do awww que esta quebrado no repositorio GURU
+for ebuild_file in /var/db/repos/guru/gui-apps/awww/*.ebuild; do
+    ebuild "$ebuild_file" manifest || true
+done
 emerge --autounmask-continue --autounmask-write --update --newuse \
     gui-wm/hyprland \
     gui-apps/waybar \
