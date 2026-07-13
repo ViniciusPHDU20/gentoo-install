@@ -74,10 +74,16 @@ app-text/xmlto text
 media-libs/libglvnd X
 x11-libs/cairo X
 dev-cpp/cairomm X
-x11-libs/libxkbcommon X
+x11-libs/libxkbcommon X wayland
 media-libs/freetype harfbuzz
 net-wireless/wpa_supplicant dbus
 sys-apps/systemd policykit
+gui-libs/gtk4-layer-shell vala introspection
+gui-libs/gtk wayland
+media-libs/libshumate vala
+x11-libs/pango X
+x11-libs/gtk+ wayland
+dev-cpp/gtkmm wayland X
 EOF_USE2
 
 # Licencas necessarias (ex: Steam, MS Fonts)
