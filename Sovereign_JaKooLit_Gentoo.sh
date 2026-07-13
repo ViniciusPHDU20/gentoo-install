@@ -73,6 +73,7 @@ kde-frameworks/kconfig qml dbus
 app-text/xmlto text
 media-libs/libglvnd X
 x11-libs/cairo X
+x11-libs/libxkbcommon X
 media-libs/freetype harfbuzz
 net-wireless/wpa_supplicant dbus
 sys-apps/systemd policykit
