@@ -64,7 +64,7 @@ media-libs/libvpx postproc
 sys-libs/zlib minizip
 app-emulation/wine-staging vulkan dxvk
 media-libs/libcanberra alsa
-dev-qt/qtbase opengl wayland eglfs
+dev-qt/qtbase opengl wayland eglfs icu
 dev-qt/qttools opengl
 kde-frameworks/kwindowsystem X
 dev-qt/qt5compat qml
@@ -87,6 +87,7 @@ echo "-5" | dispatch-conf || true
 
 # 4. INSTALACAO DO CORE (Hyprland, Waybar, Rofi, Kitty, Network, Audio)
 print_step "Compilando o Nucleo do Hyprland e Ferramentas Visuais..."
+rm -f /etc/portage/package.use/zz-autounmask* || true
 emerge --autounmask-continue --autounmask-write --update --newuse \
     gui-wm/hyprland \
     gui-apps/waybar \
