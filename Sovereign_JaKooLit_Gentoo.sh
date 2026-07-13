@@ -74,6 +74,7 @@ media-libs/libglvnd X
 x11-libs/cairo X
 media-libs/freetype harfbuzz
 net-wireless/wpa_supplicant dbus
+sys-apps/systemd policykit
 EOF_USE2
 
 # Licencas necessarias (ex: Steam, MS Fonts)
