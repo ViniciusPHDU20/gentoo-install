@@ -64,7 +64,7 @@ media-libs/libvpx postproc
 sys-libs/zlib minizip
 app-emulation/wine-staging vulkan dxvk
 media-libs/libcanberra alsa
-dev-qt/qtbase opengl wayland eglfs icu
+dev-qt/qtbase opengl wayland eglfs icu libproxy
 dev-qt/qttools opengl
 kde-frameworks/kwindowsystem X
 dev-qt/qt5compat qml
