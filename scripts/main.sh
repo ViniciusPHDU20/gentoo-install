@@ -182,7 +182,7 @@ function generate_initramfs() {
 	[[ $USED_BTRFS == "true" ]] \
 		&& modules+=("btrfs")
 	[[ $USED_F2FS == "true" ]] \
-		&& modules+=("f2fs")
+		&& dracut_opts+=("--filesystems" "f2fs")
 	[[ $USED_ZFS == "true" ]] \
 		&& modules+=("zfs")
 

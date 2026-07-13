@@ -26,7 +26,7 @@ print_step "Iniciando a Portabilidade do JaKooLit para o Gentoo..."
 # Garante que as pastas do Portage existam
 mkdir -p /etc/portage/package.use
 mkdir -p /etc/portage/package.accept_keywords
-mkdir -p /etc/portage/package.license
+
 mkdir -p /etc/portage/package.mask
 
 # 1. ATIVAR OS REPOSITORIOS E LAYMAN/ESELECT-REPO
@@ -36,10 +36,10 @@ emerge --autounmask-continue --autounmask-write app-eselect/eselect-repository d
 print_step "Sincronizando arvore principal e adicionando Overlays..."
 emaint sync -a || true
 eselect repository enable guru || true
-eselect repository enable wayland-desktop || true
+eselect repository enable hyproverlay || true
 # Sincroniza os novos overlays
 emaint sync -r guru || true
-emaint sync -r wayland-desktop || true
+emaint sync -r hyproverlay || true
 
 # 2. DEFINIR AS USE FLAGS OBRIGATÓRIAS E KEYWORDS
 print_step "Injetando permissoes (USE Flags e ~amd64) pro ecossistema Hyprland..."
@@ -66,8 +66,8 @@ app-emulation/wine-staging vulkan dxvk
 EOF_USE2
 
 # Licencas necessarias (ex: Steam, MS Fonts)
-echo "games-util/steam-launcher Valve0x" >> /etc/portage/package.license/jakoolit
-echo "media-fonts/corefonts MSttfEULA" >> /etc/portage/package.license/jakoolit
+echo "games-util/steam-launcher Valve0x" >> /etc/portage/package.license
+echo "media-fonts/corefonts MSttfEULA" >> /etc/portage/package.license
 
 # 3. ATUALIZACAO DE SEGURANCA E RESOLUCAO DE BLOQUEIOS
 print_step "Resolvendo dependencias e Dispatch-conf..."
