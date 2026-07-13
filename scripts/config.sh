@@ -346,6 +346,9 @@ function create_classic_single_disk_layout() {
 	elif [[ $root_fs == "ext4" ]]; then
 		DISK_ID_ROOT_TYPE="ext4"
 		DISK_ID_ROOT_MOUNT_OPTS="defaults,noatime,errors=remount-ro,discard"
+	elif [[ $root_fs == "f2fs" ]]; then
+		DISK_ID_ROOT_TYPE="f2fs"
+		DISK_ID_ROOT_MOUNT_OPTS="defaults,noatime,discard,compress_algorithm=lz4,compress_chksum,atgc,gc_merge,lazytime"
 	else
 		die "Unsupported root filesystem type"
 	fi
@@ -503,6 +506,9 @@ function create_raid0_luks_layout() {
 	elif [[ $root_fs == "ext4" ]]; then
 		DISK_ID_ROOT_TYPE="ext4"
 		DISK_ID_ROOT_MOUNT_OPTS="defaults,noatime,errors=remount-ro,discard"
+	elif [[ $root_fs == "f2fs" ]]; then
+		DISK_ID_ROOT_TYPE="f2fs"
+		DISK_ID_ROOT_MOUNT_OPTS="defaults,noatime,discard,compress_algorithm=lz4,compress_chksum,atgc,gc_merge,lazytime"
 	else
 		die "Unsupported root filesystem type"
 	fi
@@ -568,6 +574,9 @@ function create_raid1_luks_layout() {
 	elif [[ $root_fs == "ext4" ]]; then
 		DISK_ID_ROOT_TYPE="ext4"
 		DISK_ID_ROOT_MOUNT_OPTS="defaults,noatime,errors=remount-ro,discard"
+	elif [[ $root_fs == "f2fs" ]]; then
+		DISK_ID_ROOT_TYPE="f2fs"
+		DISK_ID_ROOT_MOUNT_OPTS="defaults,noatime,discard,compress_algorithm=lz4,compress_chksum,atgc,gc_merge,lazytime"
 	else
 		die "Unsupported root filesystem type"
 	fi
