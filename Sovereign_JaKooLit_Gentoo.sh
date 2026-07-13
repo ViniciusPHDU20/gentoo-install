@@ -94,7 +94,7 @@ emerge --autounmask-continue --autounmask-write --update --newuse \
     net-misc/networkmanager \
     gnome-extra/nm-applet \
     media-video/pipewire \
-    media-sound/wireplumber
+    media-video/wireplumber
 
 # Habilitando servicos do Sistema e do Usuario (Network e Audio)
 systemctl enable NetworkManager || true
