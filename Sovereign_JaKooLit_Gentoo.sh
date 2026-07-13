@@ -67,7 +67,7 @@ media-libs/libcanberra alsa
 dev-qt/qtbase opengl wayland eglfs icu libproxy
 dev-qt/qttools opengl
 kde-frameworks/kwindowsystem X
-dev-qt/qt5compat qml
+dev-qt/qt5compat qml icu
 kde-frameworks/kconfig qml dbus
 app-text/xmlto text
 media-libs/libglvnd X
