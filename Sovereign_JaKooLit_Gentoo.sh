@@ -63,6 +63,7 @@ x11-terms/kitty wayland
 media-libs/libvpx postproc
 sys-libs/zlib minizip
 app-emulation/wine-staging vulkan dxvk
+media-libs/libcanberra alsa
 EOF_USE2
 
 # Licencas necessarias (ex: Steam, MS Fonts)
