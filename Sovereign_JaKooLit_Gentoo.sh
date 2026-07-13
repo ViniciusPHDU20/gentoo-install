@@ -89,7 +89,7 @@ emerge --autounmask-continue --autounmask-write --update --newuse \
     gui-apps/slurp \
     media-sound/pavucontrol \
     app-misc/jq \
-    sys-auth/polkit-kde-agent \
+    kde-plasma/polkit-kde-agent \
     sys-process/btop \
     net-misc/networkmanager \
     gnome-extra/nm-applet \
